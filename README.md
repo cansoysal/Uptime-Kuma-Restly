@@ -14,6 +14,16 @@ Documentation:
 - [docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md](/home/cansoysal/uptime-kuma-api-v2/docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md)
 - [docs/IMAGE-TAGS.md](/home/cansoysal/uptime-kuma-api-v2/docs/IMAGE-TAGS.md)
 
+Verification helper:
+
+- `npm run check:socket-snapshot`
+  - Compares the documented socket snapshot to a local Uptime Kuma source checkout
+  - Default source path: `/tmp/uptime-kuma-official`
+  - You can also pass a custom path:
+    - `npm run check:socket-snapshot -- /path/to/uptime-kuma`
+    - `node scripts/check-kuma-socket-snapshot.js /path/to/uptime-kuma`
+  - Exits with code `2` when the snapshot and current source diverge
+
 ## Credits
 
 This project is derived from the original Python bridge by `pr1ncey1987`:

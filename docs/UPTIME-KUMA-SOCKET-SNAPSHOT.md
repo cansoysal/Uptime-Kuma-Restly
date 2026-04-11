@@ -23,10 +23,11 @@ Primary files inspected:
 
 This document is the authoritative mapping basis for this bridge. It intentionally takes precedence over older third-party wrapper docs when they disagree.
 
-Current server-pushed list events observed in official source
+## Current Server-Pushed List Events Observed In Official Source
 
 - `monitorList`
 - `heartbeatList`
+- `importantHeartbeatList`
 - `notificationList`
 - `proxyList`
 - `maintenanceList`
@@ -35,9 +36,11 @@ Current server-pushed list events observed in official source
 - `dockerHostList`
 - `remoteBrowserList`
 - `monitorTypeList`
+- `updateMonitorIntoList`
+- `deleteMonitorFromList`
 - `info`
 
-Current authenticated socket handlers from official source
+## Current Authenticated Socket Handlers From Official Source
 
 Auth and setup
 - `login(data, callback)`
@@ -63,6 +66,9 @@ Monitors
 - `deleteMonitor(monitorID, deleteChildren, callback)`
 - `monitorImportantHeartbeatListCount(monitorID, callback)`
 - `monitorImportantHeartbeatListPaged(monitorID, offset, count, callback)`
+- `clearEvents(monitorID, callback)`
+- `clearHeartbeats(monitorID, callback)`
+- `clearStatistics(callback)`
 
 Tags
 - `getTags(callback)`
@@ -121,6 +127,12 @@ Proxies, docker, browsers, API keys
 - `deleteAPIKey(keyID, callback)`
 - `disableAPIKey(keyID, callback)`
 - `enableAPIKey(keyID, callback)`
+- `getWebpushVapidPublicKey(callback)`
+- `cloudflared_join(token, callback)`
+- `cloudflared_leave(token, callback)`
+- `cloudflared_start(token, callback)`
+- `cloudflared_stop(token, callback)`
+- `cloudflared_removeToken(token, callback)`
 
 General and diagnostics
 - `initServerTimezone(timezone)`
@@ -132,7 +144,7 @@ General and diagnostics
 - `shrinkDatabase(callback)`
 - `getMonitorChartData(monitorID, period, callback)`
 
-Bridge alignment notes
+## Bridge Alignment Notes
 
 - This bridge now uses the current official event names above instead of older wrapper-style names like `getAPIKeys`, `getMaintenances`, or `getStatusPages`.
 - The bridge caller now supports multi-argument Socket.IO calls, which is required for current official handlers such as:
@@ -142,3 +154,12 @@ Bridge alignment notes
   - `postIncident(slug, incident, callback)`
   - `saveStatusPage(slug, config, imgDataUrl, publicGroupList, callback)`
 
+## Verification Workflow
+
+- Clone or update the official Uptime Kuma source locally
+- Run:
+  - `npm run check:socket-snapshot`
+- Or point it at a custom checkout:
+  - `node scripts/check-kuma-socket-snapshot.js /path/to/uptime-kuma`
+
+The script exits non-zero when the documented snapshot and the inspected source diverge, which gives you a cheap upgrade check before bumping `UPTIME_KUMA_TAG`.

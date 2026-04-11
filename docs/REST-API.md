@@ -90,7 +90,6 @@ Authentication
 References
 
 - Implementation source:
-  - [src/server.js](/home/cansoysal/uptime-kuma-api-v2/src/server.js)
+  - [src/server.js](../src/server.js)
 - Generated OpenAPI document:
   - `/api/openapi.json`
-

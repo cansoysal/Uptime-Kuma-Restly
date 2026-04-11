@@ -10,9 +10,9 @@ Primary paths:
 
 Documentation:
 
-- [docs/REST-API.md](/home/cansoysal/uptime-kuma-api-v2/docs/REST-API.md)
-- [docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md](/home/cansoysal/uptime-kuma-api-v2/docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md)
-- [docs/IMAGE-TAGS.md](/home/cansoysal/uptime-kuma-api-v2/docs/IMAGE-TAGS.md)
+- [docs/REST-API.md](docs/REST-API.md)
+- [docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md](docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md)
+- [docs/IMAGE-TAGS.md](docs/IMAGE-TAGS.md)
 
 Verification helper:
 
@@ -70,7 +70,7 @@ npm install
 ## Installation
 
 ```bash
-git clone https://github.com/<your-user>/uptime-kuma-restly.git
+git clone https://github.com/cansoysal/Uptime-Kuma-Restly.git
 cd uptime-kuma-restly
 cp .env.example .env
 # Edit .env with your settings
@@ -188,7 +188,7 @@ docker compose up -d
 
 Included example file:
 
-- [docker-compose.bridge-only.example](/home/cansoysal/uptime-kuma-api-v2/docker-compose.bridge-only.example)
+- [docker-compose.bridge-only.example](docker-compose.bridge-only.example)
 
 Notes:
 - The bridge is implemented in Node.js and uses `socket.io-client` + `otplib`.
@@ -254,7 +254,7 @@ Practical recommendation:
 
 More detail:
 
-- [docs/IMAGE-TAGS.md](/home/cansoysal/uptime-kuma-api-v2/docs/IMAGE-TAGS.md)
+- [docs/IMAGE-TAGS.md](docs/IMAGE-TAGS.md)
 
 Suggested run command:
 
@@ -278,9 +278,9 @@ docker compose up -d
 
 Included example file:
 
-- [docker-compose.yml.example](/home/cansoysal/uptime-kuma-api-v2/docker-compose.yml.example)
-- [unraid/uptime-kuma-bridge-combined.xml](/home/cansoysal/uptime-kuma-api-v2/unraid/uptime-kuma-bridge-combined.xml)
-- [unraid/uptime-kuma-bridge-only.xml](/home/cansoysal/uptime-kuma-api-v2/unraid/uptime-kuma-bridge-only.xml)
+- [docker-compose.yml.example](docker-compose.yml.example)
+- [unraid/uptime-kuma-bridge-combined.xml](unraid/uptime-kuma-bridge-combined.xml)
+- [unraid/uptime-kuma-bridge-only.xml](unraid/uptime-kuma-bridge-only.xml)
 
 Notes for Unraid:
 - Persist `/app/data`.
@@ -337,7 +337,7 @@ All endpoints accept and return `application/json`. All responses include `"ok":
 Coverage note:
 - The bridge preserves the original monitor- and tag-focused endpoints explicitly.
 - It also exposes a wider method surface through `POST /call`, mapped to much of the documented `uptime-kuma-api` client surface.
-- The current mapping has been updated against the latest official Uptime Kuma server source snapshot documented in [docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md](/home/cansoysal/uptime-kuma-api-v2/docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md).
+- The current mapping has been updated against the latest official Uptime Kuma server source snapshot documented in [docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md](docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md).
 - Some less common compatibility paths still depend on internal Socket.IO behavior and should not be treated as a stable public contract.
 - Legacy root-path aliases are still mounted for compatibility, but `/api` is the preferred public base path.
 

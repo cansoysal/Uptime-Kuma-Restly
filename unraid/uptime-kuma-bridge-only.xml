@@ -1,14 +1,14 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>Uptime Kuma Restly</Name>
-  <Repository>ghcr.io/your-user/uptime-kuma-restly:latest</Repository>
+  <Repository>ghcr.io/cansoysal/uptime-kuma-restly:latest</Repository>
   <Registry>https://ghcr.io</Registry>
   <Network>bridge</Network>
   <MyIP/>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
-  <Support>https://github.com/your-user/uptime-kuma-restly</Support>
-  <Project>https://github.com/your-user/uptime-kuma-restly</Project>
+  <Support>https://github.com/cansoysal/Uptime-Kuma-Restly</Support>
+  <Project>https://github.com/cansoysal/Uptime-Kuma-Restly</Project>
   <Overview>
 Uptime Kuma Restly for an existing Uptime Kuma instance.
 

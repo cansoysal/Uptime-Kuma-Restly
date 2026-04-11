@@ -1340,6 +1340,14 @@ function parseMonitorId(value) {
   return value;
 }
 
+function parseRouteInteger(value, fieldName) {
+  const parsed = Number.parseInt(String(value), 10);
+  if (!Number.isInteger(parsed)) {
+    throw new Error(`'${fieldName}' must be an integer`);
+  }
+  return parsed;
+}
+
 function findById(list, id, fieldName) {
   const numericId = parseInteger(id, fieldName);
   return (list || []).find((item) => Number(item?.id) === numericId) || null;
@@ -1489,18 +1497,13 @@ function asyncRoute(handler) {
 
 api.get("/health", healthHandler);
 
-api.post("/monitors/list", asyncRoute(async (_req, res) => {
+api.get("/monitors", asyncRoute(async (_req, res) => {
   const client = await pool.get();
   res.json({ ok: true, result: await client.getMonitors() });
 }));
 
-api.post("/tags/list", asyncRoute(async (_req, res) => {
-  const client = await pool.get();
-  res.json({ ok: true, result: await client.getTags() });
-}));
-
-api.post("/monitors/find", asyncRoute(async (req, res) => {
-  const url = String(req.body?.url || "").trim();
+api.get("/monitors/by-url", asyncRoute(async (req, res) => {
+  const url = String(req.query?.url || "").trim();
   if (!url) {
     res.status(400).json({ ok: false, error: "'url' is required" });
     return;
@@ -1514,10 +1517,10 @@ api.post("/monitors/find", asyncRoute(async (req, res) => {
   res.json({ ok: true, result: monitor });
 }));
 
-api.post("/monitors/add", asyncRoute(async (req, res) => {
-  const monitor = req.body?.monitor;
+api.post("/monitors", asyncRoute(async (req, res) => {
+  const monitor = req.body;
   if (!monitor || typeof monitor !== "object" || Array.isArray(monitor)) {
-    res.status(400).json({ ok: false, error: "'monitor' must be a non-empty object" });
+    res.status(400).json({ ok: false, error: "request body must be a non-empty monitor object" });
     return;
   }
   const client = await pool.get();
@@ -1525,44 +1528,44 @@ api.post("/monitors/add", asyncRoute(async (req, res) => {
   res.json({ ok: true, result: await client.addMonitor(prepared) });
 }));
 
-api.post("/monitors/edit", asyncRoute(async (req, res) => {
-  const monitor = req.body?.monitor;
+api.patch("/monitors/:id", asyncRoute(async (req, res) => {
+  const monitor = req.body;
   if (!monitor || typeof monitor !== "object" || Array.isArray(monitor)) {
-    res.status(400).json({ ok: false, error: "'monitor' must be a non-empty object" });
+    res.status(400).json({ ok: false, error: "request body must be a non-empty monitor object" });
     return;
   }
-  const monitorId = parseMonitorId(req.body?.monitor_id);
+  const monitorId = parseRouteInteger(req.params.id, "id");
   const client = await pool.get();
   const prepared = await prepareEditMonitorPayload(client, monitorId, monitor);
   res.json({ ok: true, result: await client.editMonitor(monitorId, prepared) });
 }));
 
-api.post("/monitors/delete", asyncRoute(async (req, res) => {
-  const monitorId = parseMonitorId(req.body?.monitor_id);
+api.delete("/monitors/:id", asyncRoute(async (req, res) => {
+  const monitorId = parseRouteInteger(req.params.id, "id");
   const client = await pool.get();
   res.json({ ok: true, result: await client.deleteMonitor(monitorId) });
 }));
 
-api.post("/monitors/status", asyncRoute(async (req, res) => {
-  const monitorId = parseMonitorId(req.body?.monitor_id);
+api.get("/monitors/:id/status", asyncRoute(async (req, res) => {
+  const monitorId = parseRouteInteger(req.params.id, "id");
   const client = await pool.get();
   res.json({ ok: true, result: await client.getHeartbeats(monitorId) });
 }));
 
-api.post("/monitors/pause", asyncRoute(async (req, res) => {
-  const monitorId = parseMonitorId(req.body?.monitor_id);
+api.post("/monitors/:id/pause", asyncRoute(async (req, res) => {
+  const monitorId = parseRouteInteger(req.params.id, "id");
   const client = await pool.get();
   res.json({ ok: true, result: await client.pauseMonitor(monitorId) });
 }));
 
-api.post("/monitors/resume", asyncRoute(async (req, res) => {
-  const monitorId = parseMonitorId(req.body?.monitor_id);
+api.post("/monitors/:id/resume", asyncRoute(async (req, res) => {
+  const monitorId = parseRouteInteger(req.params.id, "id");
   const client = await pool.get();
   res.json({ ok: true, result: await client.resumeMonitor(monitorId) });
 }));
 
-api.post("/monitors/tags/set", asyncRoute(async (req, res) => {
-  const monitorId = parseMonitorId(req.body?.monitor_id);
+api.put("/monitors/:id/tags", asyncRoute(async (req, res) => {
+  const monitorId = parseRouteInteger(req.params.id, "id");
   const tags = req.body?.tags;
   if (!Array.isArray(tags)) {
     res.status(400).json({ ok: false, error: "'tags' must be an array" });
@@ -1572,8 +1575,8 @@ api.post("/monitors/tags/set", asyncRoute(async (req, res) => {
   res.json({ ok: true, result: await client.setMonitorTags(monitorId, tags, Boolean(req.body?.replace)) });
 }));
 
-api.post("/monitors/tags/delete", asyncRoute(async (req, res) => {
-  const monitorId = parseMonitorId(req.body?.monitor_id);
+api.delete("/monitors/:id/tags", asyncRoute(async (req, res) => {
+  const monitorId = parseRouteInteger(req.params.id, "id");
   const tags = req.body?.tags;
   if (!Array.isArray(tags)) {
     res.status(400).json({ ok: false, error: "'tags' must be an array" });
@@ -1583,78 +1586,80 @@ api.post("/monitors/tags/delete", asyncRoute(async (req, res) => {
   res.json({ ok: true, result: await client.removeMonitorTags(monitorId, tags) });
 }));
 
-api.post("/notifications/list", asyncRoute(async (_req, res) => {
+api.get("/notifications", asyncRoute(async (_req, res) => {
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.get_notifications(client, {}, [], {}) });
 }));
 
-api.post("/notifications/add", asyncRoute(async (req, res) => {
-  const notification = parseRequiredObject(req.body?.notification, "notification");
+api.post("/notifications", asyncRoute(async (req, res) => {
+  const notification = parseRequiredObject(req.body, "notification");
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.add_notification(client, { notification }, [], {}) });
 }));
 
-api.post("/notifications/edit", asyncRoute(async (req, res) => {
-  const notification = parseRequiredObject(req.body?.notification, "notification");
-  const notificationId = parseInteger(req.body?.notification_id, "notification_id");
+api.patch("/notifications/:id", asyncRoute(async (req, res) => {
+  const notification = parseRequiredObject(req.body, "notification");
+  const notificationId = parseRouteInteger(req.params.id, "id");
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.edit_notification(client, { notification, notification_id: notificationId }, [], {}) });
 }));
 
-api.post("/notifications/delete", asyncRoute(async (req, res) => {
-  const notificationId = parseInteger(req.body?.notification_id, "notification_id");
+api.delete("/notifications/:id", asyncRoute(async (req, res) => {
+  const notificationId = parseRouteInteger(req.params.id, "id");
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.delete_notification(client, { notification_id: notificationId }, [], {}) });
 }));
 
-api.post("/notifications/test", asyncRoute(async (req, res) => {
-  const notification = parseRequiredObject(req.body?.notification, "notification");
+api.post("/notifications/:id/test", asyncRoute(async (req, res) => {
+  const notification = parseRequiredObject(req.body, "notification");
   const client = await pool.get();
-  res.json({ ok: true, result: await METHOD_MAP.test_notification(client, { notification }, [], {}) });
+  res.json({ ok: true, result: await METHOD_MAP.test_notification(client, { notification_id: parseRouteInteger(req.params.id, "id"), notification }, [], {}) });
 }));
 
-api.post("/proxies/list", asyncRoute(async (_req, res) => {
+api.get("/proxies", asyncRoute(async (_req, res) => {
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.get_proxies(client, {}, [], {}) });
 }));
 
-api.post("/proxies/add", asyncRoute(async (req, res) => {
-  const proxy = parseRequiredObject(req.body?.proxy, "proxy");
+api.post("/proxies", asyncRoute(async (req, res) => {
+  const proxy = parseRequiredObject(req.body, "proxy");
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.add_proxy(client, { proxy }, [], {}) });
 }));
 
-api.post("/proxies/edit", asyncRoute(async (req, res) => {
-  const proxy = parseRequiredObject(req.body?.proxy, "proxy");
+api.patch("/proxies/:id", asyncRoute(async (req, res) => {
+  const proxy = parseRequiredObject(req.body, "proxy");
+  proxy.id = proxy.id ?? parseRouteInteger(req.params.id, "id");
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.edit_proxy(client, { proxy }, [], {}) });
 }));
 
-api.post("/proxies/delete", asyncRoute(async (req, res) => {
-  const proxyId = parseInteger(req.body?.proxy_id, "proxy_id");
+api.delete("/proxies/:id", asyncRoute(async (req, res) => {
+  const proxyId = parseRouteInteger(req.params.id, "id");
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.delete_proxy(client, { proxy_id: proxyId }, [], {}) });
 }));
 
-api.post("/status-pages/list", asyncRoute(async (_req, res) => {
+api.get("/status-pages", asyncRoute(async (_req, res) => {
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.get_status_pages(client, {}, [], {}) });
 }));
 
-api.post("/status-pages/add", asyncRoute(async (req, res) => {
-  const statusPage = parseRequiredObject(req.body?.status_page, "status_page");
+api.post("/status-pages", asyncRoute(async (req, res) => {
+  const statusPage = parseRequiredObject(req.body, "status_page");
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.add_status_page(client, { status_page: statusPage }, [], {}) });
 }));
 
-api.post("/status-pages/save", asyncRoute(async (req, res) => {
-  const statusPage = parseRequiredObject(req.body?.status_page, "status_page");
+api.put("/status-pages/:slug", asyncRoute(async (req, res) => {
+  const statusPage = parseRequiredObject(req.body, "status_page");
+  statusPage.slug = statusPage.slug ?? req.params.slug;
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.save_status_page(client, { status_page: statusPage }, [], {}) });
 }));
 
-api.post("/status-pages/delete", asyncRoute(async (req, res) => {
-  const slug = req.body?.slug || req.body?.status_page_slug;
+api.delete("/status-pages/:slug", asyncRoute(async (req, res) => {
+  const slug = String(req.params.slug || "").trim();
   if (!slug) {
     res.status(400).json({ ok: false, error: "'slug' is required" });
     return;
@@ -1663,83 +1668,90 @@ api.post("/status-pages/delete", asyncRoute(async (req, res) => {
   res.json({ ok: true, result: await METHOD_MAP.delete_status_page(client, { slug }, [], {}) });
 }));
 
-api.post("/tags/add", asyncRoute(async (req, res) => {
-  const tag = parseRequiredObject(req.body?.tag, "tag");
+api.get("/tags", asyncRoute(async (_req, res) => {
+  const client = await pool.get();
+  res.json({ ok: true, result: await client.getTags() });
+}));
+
+api.post("/tags", asyncRoute(async (req, res) => {
+  const tag = parseRequiredObject(req.body, "tag");
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.add_tag(client, { tag }, [], {}) });
 }));
 
-api.post("/tags/edit", asyncRoute(async (req, res) => {
-  const tag = parseRequiredObject(req.body?.tag, "tag");
+api.patch("/tags/:id", asyncRoute(async (req, res) => {
+  const tag = parseRequiredObject(req.body, "tag");
+  tag.id = tag.id ?? parseRouteInteger(req.params.id, "id");
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.edit_tag(client, { tag }, [], {}) });
 }));
 
-api.post("/tags/delete", asyncRoute(async (req, res) => {
-  const tagId = parseInteger(req.body?.tag_id, "tag_id");
+api.delete("/tags/:id", asyncRoute(async (req, res) => {
+  const tagId = parseRouteInteger(req.params.id, "id");
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.delete_tag(client, { tag_id: tagId }, [], {}) });
 }));
 
-api.post("/settings/get", asyncRoute(async (_req, res) => {
+api.get("/settings", asyncRoute(async (_req, res) => {
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.get_settings(client, {}, [], {}) });
 }));
 
-api.post("/settings/set", asyncRoute(async (req, res) => {
-  const settings = parseRequiredObject(req.body?.settings, "settings");
+api.patch("/settings", asyncRoute(async (req, res) => {
+  const settings = parseRequiredObject(req.body, "settings");
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.set_settings(client, { settings }, [], {}) });
 }));
 
-api.post("/api-keys/list", asyncRoute(async (_req, res) => {
+api.get("/api-keys", asyncRoute(async (_req, res) => {
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.get_api_keys(client, {}, [], {}) });
 }));
 
-api.post("/api-keys/add", asyncRoute(async (req, res) => {
-  const apiKey = parseRequiredObject(req.body?.api_key, "api_key");
+api.post("/api-keys", asyncRoute(async (req, res) => {
+  const apiKey = parseRequiredObject(req.body, "api_key");
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.add_api_key(client, { api_key: apiKey }, [], {}) });
 }));
 
-api.post("/api-keys/enable", asyncRoute(async (req, res) => {
-  const keyId = parseInteger(req.body?.key_id, "key_id");
+api.post("/api-keys/:id/enable", asyncRoute(async (req, res) => {
+  const keyId = parseRouteInteger(req.params.id, "id");
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.enable_api_key(client, { key_id: keyId }, [], {}) });
 }));
 
-api.post("/api-keys/disable", asyncRoute(async (req, res) => {
-  const keyId = parseInteger(req.body?.key_id, "key_id");
+api.post("/api-keys/:id/disable", asyncRoute(async (req, res) => {
+  const keyId = parseRouteInteger(req.params.id, "id");
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.disable_api_key(client, { key_id: keyId }, [], {}) });
 }));
 
-api.post("/api-keys/delete", asyncRoute(async (req, res) => {
-  const keyId = parseInteger(req.body?.key_id, "key_id");
+api.delete("/api-keys/:id", asyncRoute(async (req, res) => {
+  const keyId = parseRouteInteger(req.params.id, "id");
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.delete_api_key(client, { key_id: keyId }, [], {}) });
 }));
 
-api.post("/maintenances/list", asyncRoute(async (_req, res) => {
+api.get("/maintenances", asyncRoute(async (_req, res) => {
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.get_maintenances(client, {}, [], {}) });
 }));
 
-api.post("/maintenances/add", asyncRoute(async (req, res) => {
-  const maintenance = parseRequiredObject(req.body?.maintenance, "maintenance");
+api.post("/maintenances", asyncRoute(async (req, res) => {
+  const maintenance = parseRequiredObject(req.body, "maintenance");
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.add_maintenance(client, { maintenance }, [], {}) });
 }));
 
-api.post("/maintenances/edit", asyncRoute(async (req, res) => {
-  const maintenance = parseRequiredObject(req.body?.maintenance, "maintenance");
+api.patch("/maintenances/:id", asyncRoute(async (req, res) => {
+  const maintenance = parseRequiredObject(req.body, "maintenance");
+  maintenance.id = maintenance.id ?? parseRouteInteger(req.params.id, "id");
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.edit_maintenance(client, { maintenance }, [], {}) });
 }));
 
-api.post("/maintenances/delete", asyncRoute(async (req, res) => {
-  const maintenanceId = parseInteger(req.body?.maintenance_id, "maintenance_id");
+api.delete("/maintenances/:id", asyncRoute(async (req, res) => {
+  const maintenanceId = parseRouteInteger(req.params.id, "id");
   const client = await pool.get();
   res.json({ ok: true, result: await METHOD_MAP.delete_maintenance(client, { maintenance_id: maintenanceId }, [], {}) });
 }));
@@ -1835,132 +1847,364 @@ const openApiSpec = {
         },
       },
     },
-    "/monitors/list": {
-      post: {
+    "/monitors": {
+      get: {
         summary: "List monitors",
         responses: { 200: { description: "Monitor list" } },
       },
-    },
-    "/monitors/find": {
       post: {
-        summary: "Find monitor by URL",
+        summary: "Create monitor",
         requestBody: {
           required: true,
           content: {
             "application/json": {
-              schema: {
-                type: "object",
-                properties: { url: { type: "string" } },
-                required: ["url"],
-              },
+              schema: { $ref: "#/components/schemas/MonitorAddPayload" },
             },
           },
         },
+        responses: { 200: { description: "Create monitor result" } },
+      },
+    },
+    "/monitors/by-url": {
+      get: {
+        summary: "Find monitor by URL",
+        parameters: [
+          {
+            name: "url",
+            in: "query",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
         responses: { 200: { description: "Matching monitor" } },
       },
     },
-    "/monitors/add": {
-      post: {
-        summary: "Add monitor",
+    "/monitors/{id}": {
+      patch: {
+        summary: "Update monitor",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "integer" },
+          },
+        ],
         requestBody: {
           required: true,
           content: {
             "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  monitor: { $ref: "#/components/schemas/MonitorAddPayload" },
-                },
-                required: ["monitor"],
-              },
+              schema: { $ref: "#/components/schemas/MonitorEditPatchPayload" },
             },
           },
         },
-        responses: { 200: { description: "Add monitor result" } },
+        responses: { 200: { description: "Update monitor result" } },
       },
-    },
-    "/monitors/edit": {
-      post: {
-        summary: "Edit monitor",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  monitor_id: { type: "integer" },
-                  monitor: {
-                    anyOf: [
-                      { $ref: "#/components/schemas/MonitorEditPatchPayload" },
-                      { $ref: "#/components/schemas/MonitorAddPayload" },
-                    ],
-                  },
-                },
-                required: ["monitor_id", "monitor"],
-              },
-            },
-          },
-        },
-        responses: { 200: { description: "Edit monitor result" } },
-      },
-    },
-    "/monitors/delete": {
-      post: {
+      delete: {
         summary: "Delete monitor",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: { monitor_id: { type: "integer" } },
-                required: ["monitor_id"],
-              },
-            },
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "integer" },
           },
-        },
+        ],
         responses: { 200: { description: "Delete monitor result" } },
       },
     },
-    "/notifications/list": {
-      post: { summary: "List notifications", responses: { 200: { description: "Notification list" } } },
+    "/monitors/{id}/status": {
+      get: {
+        summary: "Get monitor heartbeat history",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "integer" },
+          },
+        ],
+        responses: { 200: { description: "Monitor heartbeat list" } },
+      },
     },
-    "/notifications/add": {
+    "/monitors/{id}/pause": {
       post: {
-        summary: "Add notification",
+        summary: "Pause monitor",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "integer" },
+          },
+        ],
+        responses: { 200: { description: "Pause monitor result" } },
+      },
+    },
+    "/monitors/{id}/resume": {
+      post: {
+        summary: "Resume monitor",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "integer" },
+          },
+        ],
+        responses: { 200: { description: "Resume monitor result" } },
+      },
+    },
+    "/monitors/{id}/tags": {
+      put: {
+        summary: "Replace or set monitor tags",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "integer" },
+          },
+        ],
         requestBody: {
           required: true,
           content: {
             "application/json": {
               schema: {
                 type: "object",
-                properties: { notification: { type: "object" } },
-                required: ["notification"],
+                properties: {
+                  tags: { type: "array", items: TAG_REFERENCE_SCHEMA },
+                  replace: { type: "boolean" },
+                },
+                required: ["tags"],
               },
             },
           },
         },
-        responses: { 200: { description: "Add notification result" } },
+        responses: { 200: { description: "Set monitor tags result" } },
+      },
+      delete: {
+        summary: "Delete selected monitor tags",
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "integer" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  tags: { type: "array", items: TAG_REFERENCE_SCHEMA },
+                },
+                required: ["tags"],
+              },
+            },
+          },
+        },
+        responses: { 200: { description: "Delete monitor tags result" } },
       },
     },
-    "/proxies/list": {
-      post: { summary: "List proxies", responses: { 200: { description: "Proxy list" } } },
+    "/notifications": {
+      get: {
+        summary: "List notifications",
+        responses: { 200: { description: "Notification list" } },
+      },
+      post: {
+        summary: "Create notification",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { type: "object", additionalProperties: true },
+            },
+          },
+        },
+        responses: { 200: { description: "Create notification result" } },
+      },
     },
-    "/status-pages/list": {
-      post: { summary: "List status pages", responses: { 200: { description: "Status page list" } } },
+    "/notifications/{id}": {
+      patch: {
+        summary: "Update notification",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+        },
+        responses: { 200: { description: "Update notification result" } },
+      },
+      delete: {
+        summary: "Delete notification",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        responses: { 200: { description: "Delete notification result" } },
+      },
     },
-    "/tags/list": {
-      post: { summary: "List tags", responses: { 200: { description: "Tag list" } } },
+    "/notifications/{id}/test": {
+      post: {
+        summary: "Test notification",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+        },
+        responses: { 200: { description: "Test notification result" } },
+      },
     },
-    "/settings/get": {
-      post: { summary: "Get settings", responses: { 200: { description: "Settings" } } },
+    "/proxies": {
+      get: { summary: "List proxies", responses: { 200: { description: "Proxy list" } } },
+      post: {
+        summary: "Create proxy",
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+        },
+        responses: { 200: { description: "Create proxy result" } },
+      },
     },
-    "/api-keys/list": {
-      post: { summary: "List API keys", responses: { 200: { description: "API key list" } } },
+    "/proxies/{id}": {
+      patch: {
+        summary: "Update proxy",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+        },
+        responses: { 200: { description: "Update proxy result" } },
+      },
+      delete: {
+        summary: "Delete proxy",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        responses: { 200: { description: "Delete proxy result" } },
+      },
     },
-    "/maintenances/list": {
-      post: { summary: "List maintenances", responses: { 200: { description: "Maintenance list" } } },
+    "/status-pages": {
+      get: { summary: "List status pages", responses: { 200: { description: "Status page list" } } },
+      post: {
+        summary: "Create status page",
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+        },
+        responses: { 200: { description: "Create status page result" } },
+      },
+    },
+    "/status-pages/{slug}": {
+      put: {
+        summary: "Save status page",
+        parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+        },
+        responses: { 200: { description: "Save status page result" } },
+      },
+      delete: {
+        summary: "Delete status page",
+        parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
+        responses: { 200: { description: "Delete status page result" } },
+      },
+    },
+    "/tags": {
+      get: { summary: "List tags", responses: { 200: { description: "Tag list" } } },
+      post: {
+        summary: "Create tag",
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+        },
+        responses: { 200: { description: "Create tag result" } },
+      },
+    },
+    "/tags/{id}": {
+      patch: {
+        summary: "Update tag",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+        },
+        responses: { 200: { description: "Update tag result" } },
+      },
+      delete: {
+        summary: "Delete tag",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        responses: { 200: { description: "Delete tag result" } },
+      },
+    },
+    "/settings": {
+      get: { summary: "Get settings", responses: { 200: { description: "Settings" } } },
+      patch: {
+        summary: "Update settings",
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+        },
+        responses: { 200: { description: "Update settings result" } },
+      },
+    },
+    "/api-keys": {
+      get: { summary: "List API keys", responses: { 200: { description: "API key list" } } },
+      post: {
+        summary: "Create API key",
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+        },
+        responses: { 200: { description: "Create API key result" } },
+      },
+    },
+    "/api-keys/{id}": {
+      delete: {
+        summary: "Delete API key",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        responses: { 200: { description: "Delete API key result" } },
+      },
+    },
+    "/api-keys/{id}/enable": {
+      post: {
+        summary: "Enable API key",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        responses: { 200: { description: "Enable API key result" } },
+      },
+    },
+    "/api-keys/{id}/disable": {
+      post: {
+        summary: "Disable API key",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        responses: { 200: { description: "Disable API key result" } },
+      },
+    },
+    "/maintenances": {
+      get: { summary: "List maintenances", responses: { 200: { description: "Maintenance list" } } },
+      post: {
+        summary: "Create maintenance",
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+        },
+        responses: { 200: { description: "Create maintenance result" } },
+      },
+    },
+    "/maintenances/{id}": {
+      patch: {
+        summary: "Update maintenance",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+        },
+        responses: { 200: { description: "Update maintenance result" } },
+      },
+      delete: {
+        summary: "Delete maintenance",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        responses: { 200: { description: "Delete maintenance result" } },
+      },
     },
     "/call": {
       post: {

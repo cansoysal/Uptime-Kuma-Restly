@@ -22,15 +22,18 @@ All requests **MUST** include the `Authorization` header with the token provided
 
 ### 📡 Base URL
 The base path for all API calls is `/api`. 
-*Example: `http://<host>:<port>/api/monitors/list`*
+*Example: `http://<host>:<port>/api/monitors`*
 
 ### 📘 Canonical Monitor Type Reference
 
 Agents should treat the repository monitor type map as required reading before creating or editing monitors:
 
 - [docs/MONITOR-TYPES.md](docs/MONITOR-TYPES.md)
+- [docs/WRITE-PAYLOADS.md](docs/WRITE-PAYLOADS.md)
 
 If the skill instructions and that document ever diverge, prefer `docs/MONITOR-TYPES.md` and update the skill text to match before continuing.
+
+For non-monitor write endpoints such as notifications, proxies, tags, status pages, settings, API keys, and maintenances, use [docs/WRITE-PAYLOADS.md](docs/WRITE-PAYLOADS.md) for the bridge envelope fields and example request bodies.
 
 ---
 
@@ -45,16 +48,18 @@ If the skill instructions and that document ever diverge, prefer `docs/MONITOR-T
 ### 🖥️ Monitor Management
 | Endpoint | Method | Payload/Description |
 |----------|--------|---------------------|
-| `/monitors/list` | `POST` | Returns all monitors as a dictionary keyed by ID. |
-| `/monitors/add` | `POST` | **Payload:** `{"monitor": {...}}` where `monitor.type` controls which fields are required. |
-| `/monitors/edit` | `POST` | **Payload:** `{"monitor_id": 42, "monitor": {...}}`. The patch is merged with the existing monitor, then validated against that monitor type. |
-| `/monitors/delete`| `POST` | **Payload:** `{"monitor_id": 42}` |
-| `/monitors/pause` | `POST` | **Payload:** `{"monitor_id": 42}` |
-| `/monitors/resume`| `POST` | **Payload:** `{"monitor_id": 42}` |
-| `/monitors/status`| `POST` | **Payload:** `{"monitor_id": 42}` (Returns heartbeat list). |
+| `/monitors` | `GET` | Returns all monitors as a dictionary keyed by ID. |
+| `/monitors` | `POST` | **Payload:** monitor object where `type` controls required fields. |
+| `/monitors/:id` | `PATCH` | **Payload:** partial monitor patch merged into the existing monitor before validation. |
+| `/monitors/:id`| `DELETE` | Deletes a monitor by ID. |
+| `/monitors/:id/pause` | `POST` | Pauses a monitor. |
+| `/monitors/:id/resume`| `POST` | Resumes a monitor. |
+| `/monitors/:id/status`| `GET` | Returns heartbeat list for a monitor. |
+| `/monitors/by-url?url=...` | `GET` | Finds a monitor by URL. |
 
 ### 🧩 Monitor Type Required Fields
-Use these minimum fields inside `monitor` for `/monitors/add`. For `/monitors/edit`, the final merged monitor must satisfy the same rules.
+Use these minimum fields in the request body for `POST /monitors`. For `PATCH /monitors/:id`, the final merged monitor must satisfy the same rules.
+Use these minimum fields inside the request body for `POST /monitors`. For `PATCH /monitors/:id`, the final merged monitor must satisfy the same rules.
 
 This section mirrors [docs/MONITOR-TYPES.md](docs/MONITOR-TYPES.md) so the skill remains usable even when the agent only has the skill file open.
 
@@ -113,17 +118,40 @@ For `kafka-producer` with `kafkaProducerSaslOptions.mechanism: "aws"`:
 ### 🏷️ Tagging
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/tags/list` | `GET` | Returns all tag definitions (id, name, colour). |
-| `/monitors/tags/set`| `POST` | **Payload:** `{"monitor_id": 42, "tags": ["#tag1", 3], "replace": true}` |
-| `/monitors/tags/delete`| `POST` | **Payload:** `{"monitor_id": 42, "tags": ["#tag1"]}` |
+| `/tags` | `GET` | Returns all tag definitions (id, name, colour). |
+| `/tags` | `POST` | Creates a tag from the request body. |
+| `/tags/:id` | `PATCH` | Updates a tag from the request body. |
+| `/tags/:id` | `DELETE` | Deletes a tag by ID. |
+| `/monitors/:id/tags`| `PUT` | **Payload:** `{"tags": ["#tag1", 3], "replace": true}` |
+| `/monitors/:id/tags`| `DELETE` | **Payload:** `{"tags": ["#tag1"]}` |
 
 ### 🔔 Notifications & System
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/notifications/list`| `POST` | List all notification channels. |
-| `/notifications/test`| `POST` | **Payload:** `{"id": 1}` (Tests a specific notification). |
-| `/status-pages/list`| `POST` | List all status pages. |
-| `/settings/get` | `POST` | Get current Kuma settings. |
+| `/notifications`| `GET` | List all notification channels. |
+| `/notifications`| `POST` | Create a notification from the request body. |
+| `/notifications/:id`| `PATCH` | Update a notification from the request body. |
+| `/notifications/:id`| `DELETE` | Delete a notification by ID. |
+| `/notifications/:id/test`| `POST` | Test a notification using the request body. |
+| `/proxies`| `GET` | List proxies. |
+| `/proxies`| `POST` | Create a proxy from the request body. |
+| `/proxies/:id`| `PATCH` | Update a proxy from the request body. |
+| `/proxies/:id`| `DELETE` | Delete a proxy by ID. |
+| `/status-pages`| `GET` | List all status pages. |
+| `/status-pages`| `POST` | Create a status page from the request body. |
+| `/status-pages/:slug`| `PUT` | Save a status page using the request body. |
+| `/status-pages/:slug`| `DELETE` | Delete a status page by slug. |
+| `/settings` | `GET` | Get current Kuma settings. |
+| `/settings` | `PATCH` | Update Kuma settings from the request body. |
+| `/api-keys` | `GET` | List API keys. |
+| `/api-keys` | `POST` | Create an API key from the request body. |
+| `/api-keys/:id/enable` | `POST` | Enable an API key. |
+| `/api-keys/:id/disable` | `POST` | Disable an API key. |
+| `/api-keys/:id` | `DELETE` | Delete an API key. |
+| `/maintenances` | `GET` | List maintenances. |
+| `/maintenances` | `POST` | Create a maintenance from the request body. |
+| `/maintenances/:id` | `PATCH` | Update a maintenance from the request body. |
+| `/maintenances/:id` | `DELETE` | Delete a maintenance by ID. |
 
 ---
 
@@ -153,7 +181,7 @@ curl -X POST "http://localhost:9911/api/call" \
 
 ## 💡 Implementation Tips for Agents
 
-1.  **Tagging Logic:** When adding tags via `/monitors/tags/set`, you can use a string (e.g., `"#production"`) to find/create a tag by name, or an integer to use an existing ID.
-2.  **Monitor Merging:** The `/monitors/edit` endpoint is additive. You only need to send the fields you wish to change.
+1.  **Tagging Logic:** When updating tags via `PUT /monitors/:id/tags`, you can use a string (e.g., `"#production"`) to find/create a tag by name, or an integer to use an existing ID.
+2.  **Monitor Merging:** `PATCH /monitors/:id` is additive. You only need to send the fields you wish to change.
 3.  **Error Handling:** All responses follow the pattern `{"ok": true, ...}` or `{"ok": false, "error": "..."}`. Always check the `ok` field before proceeding with logic.
 4.  **2FA Awareness:** If the bridge is configured with a `KUMA_2FA_SECRET`, the agent can perform actions that require 2FA-protected sessions seamlessly via the existing connection.

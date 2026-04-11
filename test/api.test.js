@@ -85,6 +85,14 @@ function endpointSuccessTest(name, path, body) {
   });
 }
 
+function endpointRequestSuccessTest(name, path, options = {}) {
+  test(name, async () => {
+    const result = await request(path, options);
+    assert.equal(result.response.status, 200);
+    assert.equal(result.body.ok, true);
+  });
+}
+
 test("GET /api/health works without auth", async () => {
   const result = await request("/api/health", { method: "GET", auth: false });
   assert.equal(result.response.status, 200);
@@ -109,36 +117,37 @@ test("GET /docs works without auth", async () => {
   assert.match(result.body, /swagger/i);
 });
 
-test("POST /api/monitors/list requires auth when token is configured", async () => {
-  const result = await request("/api/monitors/list", { auth: false });
+test("GET /api/monitors requires auth when token is configured", async () => {
+  const result = await request("/api/monitors", { method: "GET", auth: false });
   assert.equal(result.response.status, 401);
   assert.equal(result.body.ok, false);
 });
 
-test("POST /api/monitors/list rejects invalid bearer tokens", async () => {
-  const result = await request("/api/monitors/list", {
+test("GET /api/monitors rejects invalid bearer tokens", async () => {
+  const result = await request("/api/monitors", {
+    method: "GET",
     headers: { authorization: "Bearer wrong-token" },
   });
   assert.equal(result.response.status, 403);
   assert.equal(result.body.ok, false);
 });
 
-test("POST /api/monitors/find validates required url", async () => {
-  const result = await request("/api/monitors/find", { body: {} });
+test("GET /api/monitors/by-url validates required url", async () => {
+  const result = await request("/api/monitors/by-url", { method: "GET" });
   assert.equal(result.response.status, 400);
   assert.equal(result.body.ok, false);
 });
 
-test("POST /api/monitors/add validates required monitor", async () => {
-  const result = await request("/api/monitors/add", { body: {} });
+test("POST /api/monitors validates required monitor", async () => {
+  const result = await request("/api/monitors", { body: {} });
   assert.equal(result.response.status, 400);
   assert.equal(result.body.ok, false);
 });
 
-test("POST /api/monitors/add validates type-specific required fields", async () => {
-  const result = await request("/api/monitors/add", {
+test("POST /api/monitors validates type-specific required fields", async () => {
+  const result = await request("/api/monitors", {
     body: {
-      monitor: { type: "keyword", url: "https://example.com" },
+      type: "keyword", url: "https://example.com",
     },
   });
   assert.equal(result.response.status, 400);
@@ -146,10 +155,10 @@ test("POST /api/monitors/add validates type-specific required fields", async () 
   assert.match(result.body.error, /requires field\(s\): keyword/);
 });
 
-test("POST /api/monitors/add auto-generates a push token", async () => {
-  const result = await request("/api/monitors/add", {
+test("POST /api/monitors auto-generates a push token", async () => {
+  const result = await request("/api/monitors", {
     body: {
-      monitor: { type: "push", name: "Passive monitor" },
+      type: "push", name: "Passive monitor",
     },
   });
   assert.equal(result.response.status, 200);
@@ -158,11 +167,11 @@ test("POST /api/monitors/add auto-generates a push token", async () => {
   assert.equal(result.body.result.monitor.pushToken.length, 32);
 });
 
-test("POST /api/monitors/edit validates the merged monitor payload", async () => {
-  const result = await request("/api/monitors/edit", {
+test("PATCH /api/monitors/:id validates the merged monitor payload", async () => {
+  const result = await request("/api/monitors/1", {
+    method: "PATCH",
     body: {
-      monitor_id: 1,
-      monitor: { type: "docker" },
+      type: "docker",
     },
   });
   assert.equal(result.response.status, 400);
@@ -176,82 +185,87 @@ test("POST /api/call validates required method", async () => {
   assert.equal(result.body.ok, false);
 });
 
-endpointSuccessTest("POST /api/monitors/list", "/api/monitors/list");
-endpointSuccessTest("POST /api/tags/list", "/api/tags/list");
-endpointSuccessTest("POST /api/monitors/find", "/api/monitors/find", { url: "https://example.com" });
-endpointSuccessTest("POST /api/monitors/add", "/api/monitors/add", {
-  monitor: { name: "Added", url: "https://example.com", type: "http" },
+endpointRequestSuccessTest("GET /api/monitors", "/api/monitors", { method: "GET" });
+endpointRequestSuccessTest("GET /api/monitors/by-url", "/api/monitors/by-url?url=https%3A%2F%2Fexample.com", { method: "GET" });
+endpointRequestSuccessTest("POST /api/monitors", "/api/monitors", {
+  body: { name: "Added", url: "https://example.com", type: "http" },
 });
-endpointSuccessTest("POST /api/monitors/edit", "/api/monitors/edit", {
-  monitor_id: 1,
-  monitor: { name: "Updated" },
+endpointRequestSuccessTest("PATCH /api/monitors/:id", "/api/monitors/1", {
+  method: "PATCH",
+  body: { name: "Updated" },
 });
-endpointSuccessTest("POST /api/monitors/delete", "/api/monitors/delete", { monitor_id: 1 });
-endpointSuccessTest("POST /api/monitors/status", "/api/monitors/status", { monitor_id: 1 });
-endpointSuccessTest("POST /api/monitors/pause", "/api/monitors/pause", { monitor_id: 1 });
-endpointSuccessTest("POST /api/monitors/resume", "/api/monitors/resume", { monitor_id: 1 });
-endpointSuccessTest("POST /api/monitors/tags/set", "/api/monitors/tags/set", {
-  monitor_id: 1,
-  tags: ["#demo"],
-  replace: true,
+endpointRequestSuccessTest("DELETE /api/monitors/:id", "/api/monitors/1", { method: "DELETE" });
+endpointRequestSuccessTest("GET /api/monitors/:id/status", "/api/monitors/1/status", { method: "GET" });
+endpointRequestSuccessTest("POST /api/monitors/:id/pause", "/api/monitors/1/pause");
+endpointRequestSuccessTest("POST /api/monitors/:id/resume", "/api/monitors/1/resume");
+endpointRequestSuccessTest("PUT /api/monitors/:id/tags", "/api/monitors/1/tags", {
+  method: "PUT",
+  body: { tags: ["#demo"], replace: true },
 });
-endpointSuccessTest("POST /api/monitors/tags/delete", "/api/monitors/tags/delete", {
-  monitor_id: 1,
-  tags: ["#demo"],
+endpointRequestSuccessTest("DELETE /api/monitors/:id/tags", "/api/monitors/1/tags", {
+  method: "DELETE",
+  body: { tags: ["#demo"] },
 });
-endpointSuccessTest("POST /api/notifications/list", "/api/notifications/list");
-endpointSuccessTest("POST /api/notifications/add", "/api/notifications/add", {
-  notification: { name: "Email" },
+endpointRequestSuccessTest("GET /api/notifications", "/api/notifications", { method: "GET" });
+endpointRequestSuccessTest("POST /api/notifications", "/api/notifications", {
+  body: { name: "Email" },
 });
-endpointSuccessTest("POST /api/notifications/edit", "/api/notifications/edit", {
-  notification_id: 20,
-  notification: { id: 20, name: "Email 2" },
+endpointRequestSuccessTest("PATCH /api/notifications/:id", "/api/notifications/20", {
+  method: "PATCH",
+  body: { id: 20, name: "Email 2" },
 });
-endpointSuccessTest("POST /api/notifications/delete", "/api/notifications/delete", { notification_id: 20 });
-endpointSuccessTest("POST /api/notifications/test", "/api/notifications/test", {
-  notification: { name: "Email" },
+endpointRequestSuccessTest("DELETE /api/notifications/:id", "/api/notifications/20", { method: "DELETE" });
+endpointRequestSuccessTest("POST /api/notifications/:id/test", "/api/notifications/20/test", {
+  body: { name: "Email" },
 });
-endpointSuccessTest("POST /api/proxies/list", "/api/proxies/list");
-endpointSuccessTest("POST /api/proxies/add", "/api/proxies/add", {
-  proxy: { host: "proxy.local" },
+endpointRequestSuccessTest("GET /api/proxies", "/api/proxies", { method: "GET" });
+endpointRequestSuccessTest("POST /api/proxies", "/api/proxies", {
+  body: { host: "proxy.local" },
 });
-endpointSuccessTest("POST /api/proxies/edit", "/api/proxies/edit", {
-  proxy: { id: 30, host: "proxy2.local" },
+endpointRequestSuccessTest("PATCH /api/proxies/:id", "/api/proxies/30", {
+  method: "PATCH",
+  body: { host: "proxy2.local" },
 });
-endpointSuccessTest("POST /api/proxies/delete", "/api/proxies/delete", { proxy_id: 30 });
-endpointSuccessTest("POST /api/status-pages/list", "/api/status-pages/list");
-endpointSuccessTest("POST /api/status-pages/add", "/api/status-pages/add", {
-  status_page: { title: "Status", slug: "status" },
+endpointRequestSuccessTest("DELETE /api/proxies/:id", "/api/proxies/30", { method: "DELETE" });
+endpointRequestSuccessTest("GET /api/status-pages", "/api/status-pages", { method: "GET" });
+endpointRequestSuccessTest("POST /api/status-pages", "/api/status-pages", {
+  body: { title: "Status", slug: "status" },
 });
-endpointSuccessTest("POST /api/status-pages/save", "/api/status-pages/save", {
-  status_page: { slug: "status", config: { title: "Status" }, publicGroupList: [] },
+endpointRequestSuccessTest("PUT /api/status-pages/:slug", "/api/status-pages/status", {
+  method: "PUT",
+  body: { config: { title: "Status" }, publicGroupList: [] },
 });
-endpointSuccessTest("POST /api/status-pages/delete", "/api/status-pages/delete", { slug: "status" });
-endpointSuccessTest("POST /api/tags/add", "/api/tags/add", {
-  tag: { name: "#demo", color: "#ffffff" },
+endpointRequestSuccessTest("DELETE /api/status-pages/:slug", "/api/status-pages/status", { method: "DELETE" });
+endpointRequestSuccessTest("GET /api/tags", "/api/tags", { method: "GET" });
+endpointRequestSuccessTest("POST /api/tags", "/api/tags", {
+  body: { name: "#demo", color: "#ffffff" },
 });
-endpointSuccessTest("POST /api/tags/edit", "/api/tags/edit", {
-  tag: { id: 10, name: "#demo2", color: "#000000" },
+endpointRequestSuccessTest("PATCH /api/tags/:id", "/api/tags/10", {
+  method: "PATCH",
+  body: { name: "#demo2", color: "#000000" },
 });
-endpointSuccessTest("POST /api/tags/delete", "/api/tags/delete", { tag_id: 10 });
-endpointSuccessTest("POST /api/settings/get", "/api/settings/get");
-endpointSuccessTest("POST /api/settings/set", "/api/settings/set", {
-  settings: { theme: "dark" },
+endpointRequestSuccessTest("DELETE /api/tags/:id", "/api/tags/10", { method: "DELETE" });
+endpointRequestSuccessTest("GET /api/settings", "/api/settings", { method: "GET" });
+endpointRequestSuccessTest("PATCH /api/settings", "/api/settings", {
+  method: "PATCH",
+  body: { theme: "dark" },
 });
-endpointSuccessTest("POST /api/api-keys/list", "/api/api-keys/list");
-endpointSuccessTest("POST /api/api-keys/add", "/api/api-keys/add", {
-  api_key: { name: "Bridge Key" },
+endpointRequestSuccessTest("GET /api/api-keys", "/api/api-keys", { method: "GET" });
+endpointRequestSuccessTest("POST /api/api-keys", "/api/api-keys", {
+  body: { name: "Bridge Key" },
 });
-endpointSuccessTest("POST /api/api-keys/enable", "/api/api-keys/enable", { key_id: 60 });
-endpointSuccessTest("POST /api/api-keys/disable", "/api/api-keys/disable", { key_id: 60 });
-endpointSuccessTest("POST /api/api-keys/delete", "/api/api-keys/delete", { key_id: 60 });
-endpointSuccessTest("POST /api/maintenances/list", "/api/maintenances/list");
-endpointSuccessTest("POST /api/maintenances/add", "/api/maintenances/add", {
-  maintenance: { title: "Window" },
+endpointRequestSuccessTest("POST /api/api-keys/:id/enable", "/api/api-keys/60/enable");
+endpointRequestSuccessTest("POST /api/api-keys/:id/disable", "/api/api-keys/60/disable");
+endpointRequestSuccessTest("DELETE /api/api-keys/:id", "/api/api-keys/60", { method: "DELETE" });
+endpointRequestSuccessTest("GET /api/maintenances", "/api/maintenances", { method: "GET" });
+endpointRequestSuccessTest("POST /api/maintenances", "/api/maintenances", {
+  body: { title: "Window" },
 });
-endpointSuccessTest("POST /api/maintenances/edit", "/api/maintenances/edit", {
-  maintenance: { id: 50, title: "Window 2" },
+endpointRequestSuccessTest("PATCH /api/maintenances/:id", "/api/maintenances/50", {
+  method: "PATCH",
+  body: { title: "Window 2" },
 });
-endpointSuccessTest("POST /api/maintenances/delete", "/api/maintenances/delete", { maintenance_id: 50 });
+endpointRequestSuccessTest("DELETE /api/maintenances/:id", "/api/maintenances/50", { method: "DELETE" });
+
 endpointSuccessTest("POST /api/monitors/sniff", "/api/monitors/sniff", { timeout: 1 });
 endpointSuccessTest("POST /api/call", "/api/call", { method: "get_monitors" });

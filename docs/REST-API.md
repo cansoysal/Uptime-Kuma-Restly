@@ -15,62 +15,64 @@ Public unauthenticated endpoints:
 - `GET /docs`
 - `GET /docs/`
 
-Authenticated endpoints:
+Authenticated endpoints
+
+Preferred REST endpoints
 
 Monitors
-- `POST /api/monitors/list`
-- `POST /api/monitors/find`
-- `POST /api/monitors/add`
-- `POST /api/monitors/edit`
-- `POST /api/monitors/delete`
-- `POST /api/monitors/status`
-- `POST /api/monitors/pause`
-- `POST /api/monitors/resume`
-- `POST /api/monitors/tags/set`
-- `POST /api/monitors/tags/delete`
+- `GET /api/monitors`
+- `GET /api/monitors/by-url?url=...`
+- `POST /api/monitors`
+- `PATCH /api/monitors/:id`
+- `DELETE /api/monitors/:id`
+- `GET /api/monitors/:id/status`
+- `POST /api/monitors/:id/pause`
+- `POST /api/monitors/:id/resume`
+- `PUT /api/monitors/:id/tags`
+- `DELETE /api/monitors/:id/tags`
 - `POST /api/monitors/sniff`
 
 Notifications
-- `POST /api/notifications/list`
-- `POST /api/notifications/add`
-- `POST /api/notifications/edit`
-- `POST /api/notifications/delete`
-- `POST /api/notifications/test`
+- `GET /api/notifications`
+- `POST /api/notifications`
+- `PATCH /api/notifications/:id`
+- `DELETE /api/notifications/:id`
+- `POST /api/notifications/:id/test`
 
 Proxies
-- `POST /api/proxies/list`
-- `POST /api/proxies/add`
-- `POST /api/proxies/edit`
-- `POST /api/proxies/delete`
+- `GET /api/proxies`
+- `POST /api/proxies`
+- `PATCH /api/proxies/:id`
+- `DELETE /api/proxies/:id`
 
 Status pages
-- `POST /api/status-pages/list`
-- `POST /api/status-pages/add`
-- `POST /api/status-pages/save`
-- `POST /api/status-pages/delete`
+- `GET /api/status-pages`
+- `POST /api/status-pages`
+- `PUT /api/status-pages/:slug`
+- `DELETE /api/status-pages/:slug`
 
 Tags
-- `POST /api/tags/list`
-- `POST /api/tags/add`
-- `POST /api/tags/edit`
-- `POST /api/tags/delete`
+- `GET /api/tags`
+- `POST /api/tags`
+- `PATCH /api/tags/:id`
+- `DELETE /api/tags/:id`
 
 Settings
-- `POST /api/settings/get`
-- `POST /api/settings/set`
+- `GET /api/settings`
+- `PATCH /api/settings`
 
 API keys
-- `POST /api/api-keys/list`
-- `POST /api/api-keys/add`
-- `POST /api/api-keys/enable`
-- `POST /api/api-keys/disable`
-- `POST /api/api-keys/delete`
+- `GET /api/api-keys`
+- `POST /api/api-keys`
+- `POST /api/api-keys/:id/enable`
+- `POST /api/api-keys/:id/disable`
+- `DELETE /api/api-keys/:id`
 
 Maintenances
-- `POST /api/maintenances/list`
-- `POST /api/maintenances/add`
-- `POST /api/maintenances/edit`
-- `POST /api/maintenances/delete`
+- `GET /api/maintenances`
+- `POST /api/maintenances`
+- `PATCH /api/maintenances/:id`
+- `DELETE /api/maintenances/:id`
 
 Compatibility dispatcher
 - `POST /api/call`
@@ -95,5 +97,7 @@ References
   - [src/server.js](../src/server.js)
 - Monitor type and required field reference:
   - [MONITOR-TYPES.md](MONITOR-TYPES.md)
+- Write payload and example reference:
+  - [WRITE-PAYLOADS.md](WRITE-PAYLOADS.md)
 - Generated OpenAPI document:
   - `/api/openapi.json`

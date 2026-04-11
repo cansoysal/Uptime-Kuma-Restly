@@ -2,14 +2,14 @@
 
 Snapshot date: 2026-04-12
 
-This document lists the Uptime Kuma monitor types currently modeled by this bridge and the minimum required fields for `/api/monitors/add`.
+This document lists the Uptime Kuma monitor types currently modeled by this bridge and the minimum required fields for `POST /api/monitors`.
 
-For `/api/monitors/edit`, the bridge merges the patch into the existing monitor and validates the final merged payload against the same rules.
+For `PATCH /api/monitors/:id`, the bridge merges the patch into the existing monitor and validates the final merged payload against the same rules.
 
 ## Base Rules
 
-- Send monitor data as `{"monitor": {...}}` to `POST /api/monitors/add`
-- Send monitor data as `{"monitor_id": 42, "monitor": {...}}` to `POST /api/monitors/edit`
+- Send the monitor object as the request body to `POST /api/monitors`
+- Send a partial monitor patch as the request body to `PATCH /api/monitors/:id`
 - `monitor.type` selects the monitor model
 - Push monitors get an auto-generated `pushToken` if you omit it
 
@@ -80,4 +80,3 @@ This mapping was derived from the current Uptime Kuma source:
 - `server/server.js`
 - `server/model/monitor.js`
 - `src/pages/EditMonitor.vue`
-

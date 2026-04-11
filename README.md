@@ -12,6 +12,7 @@ Documentation:
 
 - [docs/REST-API.md](docs/REST-API.md)
 - [docs/MONITOR-TYPES.md](docs/MONITOR-TYPES.md)
+- [docs/WRITE-PAYLOADS.md](docs/WRITE-PAYLOADS.md)
 - [docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md](docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md)
 - [docs/IMAGE-TAGS.md](docs/IMAGE-TAGS.md)
 
@@ -58,30 +59,26 @@ Uptime Kuma's API is Socket.IO only — there is no official HTTP REST API. This
 
 Monitor create and edit requests are validated against the selected Uptime Kuma monitor type.
 
-- `POST /api/monitors/add` requires a `monitor.type`-appropriate payload.
-- `POST /api/monitors/edit` merges your patch into the existing monitor, then validates the final payload.
+- `POST /api/monitors` requires a `type`-appropriate payload.
+- `PATCH /api/monitors/:id` merges your patch into the existing monitor, then validates the final payload.
 - Push monitors get a generated `pushToken` automatically if you do not send one.
 
 Examples:
 
 ```json
 {
-  "monitor": {
-    "type": "http",
-    "name": "Example",
-    "url": "https://example.com"
-  }
+  "type": "http",
+  "name": "Example",
+  "url": "https://example.com"
 }
 ```
 
 ```json
 {
-  "monitor": {
-    "type": "keyword",
-    "name": "Homepage keyword",
-    "url": "https://example.com",
-    "keyword": "Example Domain"
-  }
+  "type": "keyword",
+  "name": "Homepage keyword",
+  "url": "https://example.com",
+  "keyword": "Example Domain"
 }
 ```
 
@@ -431,7 +428,7 @@ Returns bridge status and configuration info.
 #### List all monitors
 
 ```
-POST /api/monitors/list
+GET /api/monitors
 ```
 
 Returns all monitors from Kuma as a dict keyed by monitor ID.
@@ -441,11 +438,7 @@ Returns all monitors from Kuma as a dict keyed by monitor ID.
 #### Find a monitor by URL
 
 ```
-POST /api/monitors/find
-```
-
-```json
-{ "url": "https://example.com" }
+GET /api/monitors/by-url?url=https://example.com
 ```
 
 Returns the first monitor whose URL matches (case-insensitive, ignores trailing slash).
@@ -455,19 +448,17 @@ Returns the first monitor whose URL matches (case-insensitive, ignores trailing 
 #### Add a monitor
 
 ```
-POST /api/monitors/add
+POST /api/monitors
 ```
 
 ```json
 {
-  "monitor": {
-    "name": "My Website",
-    "url": "https://example.com",
-    "type": "http",
-    "interval": 60,
-    "notifications": [1, 2],
-    "tags": ["#magento", 3, {"name": "#newtag", "color": "#7C3AED"}]
-  }
+  "name": "My Website",
+  "url": "https://example.com",
+  "type": "http",
+  "interval": 60,
+  "notifications": [1, 2],
+  "tags": ["#magento", 3, {"name": "#newtag", "color": "#7C3AED"}]
 }
 ```
 
@@ -485,17 +476,14 @@ All Kuma monitor fields are supported. Unspecified fields use sensible defaults.
 #### Edit a monitor
 
 ```
-POST /api/monitors/edit
+PATCH /api/monitors/42
 ```
 
 ```json
 {
-  "monitor_id": 42,
-  "monitor": {
-    "name": "Updated Name",
-    "interval": 30,
-    "tags": ["#magento"]
-  }
+  "name": "Updated Name",
+  "interval": 30,
+  "tags": ["#magento"]
 }
 ```
 
@@ -506,11 +494,7 @@ Fetches the existing monitor and merges your changes, so you only need to send t
 #### Delete a monitor
 
 ```
-POST /api/monitors/delete
-```
-
-```json
-{ "monitor_id": 42 }
+DELETE /api/monitors/42
 ```
 
 ---
@@ -518,11 +502,7 @@ POST /api/monitors/delete
 #### Pause a monitor
 
 ```
-POST /api/monitors/pause
-```
-
-```json
-{ "monitor_id": 42 }
+POST /api/monitors/42/pause
 ```
 
 ---
@@ -530,11 +510,7 @@ POST /api/monitors/pause
 #### Resume a monitor
 
 ```
-POST /api/monitors/resume
-```
-
-```json
-{ "monitor_id": 42 }
+POST /api/monitors/42/resume
 ```
 
 ---
@@ -542,11 +518,7 @@ POST /api/monitors/resume
 #### Get monitor status / heartbeats
 
 ```
-POST /api/monitors/status
-```
-
-```json
-{ "monitor_id": 42 }
+GET /api/monitors/42/status
 ```
 
 Returns the heartbeat list for the monitor.
@@ -555,33 +527,34 @@ Returns the heartbeat list for the monitor.
 
 The bridge also exposes direct endpoints for several common non-monitor resources:
 
-- `POST /api/notifications/list`
-- `POST /api/notifications/add`
-- `POST /api/notifications/edit`
-- `POST /api/notifications/delete`
-- `POST /api/notifications/test`
-- `POST /api/proxies/list`
-- `POST /api/proxies/add`
-- `POST /api/proxies/edit`
-- `POST /api/proxies/delete`
-- `POST /api/status-pages/list`
-- `POST /api/status-pages/add`
-- `POST /api/status-pages/save`
-- `POST /api/status-pages/delete`
-- `POST /api/tags/add`
-- `POST /api/tags/edit`
-- `POST /api/tags/delete`
-- `POST /api/settings/get`
-- `POST /api/settings/set`
-- `POST /api/api-keys/list`
-- `POST /api/api-keys/add`
-- `POST /api/api-keys/enable`
-- `POST /api/api-keys/disable`
-- `POST /api/api-keys/delete`
-- `POST /api/maintenances/list`
-- `POST /api/maintenances/add`
-- `POST /api/maintenances/edit`
-- `POST /api/maintenances/delete`
+- `GET /api/notifications`
+- `POST /api/notifications`
+- `PATCH /api/notifications/:id`
+- `DELETE /api/notifications/:id`
+- `POST /api/notifications/:id/test`
+- `GET /api/proxies`
+- `POST /api/proxies`
+- `PATCH /api/proxies/:id`
+- `DELETE /api/proxies/:id`
+- `GET /api/status-pages`
+- `POST /api/status-pages`
+- `PUT /api/status-pages/:slug`
+- `DELETE /api/status-pages/:slug`
+- `GET /api/tags`
+- `POST /api/tags`
+- `PATCH /api/tags/:id`
+- `DELETE /api/tags/:id`
+- `GET /api/settings`
+- `PATCH /api/settings`
+- `GET /api/api-keys`
+- `POST /api/api-keys`
+- `POST /api/api-keys/:id/enable`
+- `POST /api/api-keys/:id/disable`
+- `DELETE /api/api-keys/:id`
+- `GET /api/maintenances`
+- `POST /api/maintenances`
+- `PATCH /api/maintenances/:id`
+- `DELETE /api/maintenances/:id`
 
 ### Compatibility Method Dispatch
 
@@ -617,7 +590,7 @@ The bridge now maps a large subset of the methods documented by `uptime-kuma-api
 #### List all tag definitions
 
 ```
-POST /api/tags/list
+GET /api/tags
 ```
 
 Returns all tag definitions from Kuma (id, name, colour).
@@ -627,12 +600,11 @@ Returns all tag definitions from Kuma (id, name, colour).
 #### Add tags to a monitor
 
 ```
-POST /api/monitors/tags/set
+PUT /api/monitors/42/tags
 ```
 
 ```json
 {
-  "monitor_id": 42,
   "tags": ["#magento", 3]
 }
 ```
@@ -641,7 +613,6 @@ Adds the specified tags to the monitor. Existing tags are kept unless you pass `
 
 ```json
 {
-  "monitor_id": 42,
   "tags": ["#magento"],
   "replace": true
 }
@@ -654,12 +625,11 @@ With `"replace": true`, all existing tags on the monitor are removed first, then
 #### Remove tags from a monitor
 
 ```
-POST /api/monitors/tags/delete
+DELETE /api/monitors/42/tags
 ```
 
 ```json
 {
-  "monitor_id": 42,
   "tags": ["#magento"]
 }
 ```
@@ -689,44 +659,42 @@ TOKEN="your-secret-token"
 BASE="http://127.0.0.1:9911/api"
 
 # Add a monitor with tags
-curl -s -X POST $BASE/monitors/add \
+curl -s -X POST $BASE/monitors \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"monitor": {"name": "My Site", "url": "https://example.com", "tags": ["#production"]}}'
+  -d '{"name": "My Site", "url": "https://example.com", "type": "http", "tags": ["#production"]}'
 
 # Edit a monitor
-curl -s -X POST $BASE/monitors/edit \
+curl -s -X PATCH $BASE/monitors/42 \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"monitor_id": 42, "monitor": {"interval": 30}}'
+  -d '{"interval": 30}'
 
 # Add a tag to an existing monitor
-curl -s -X POST $BASE/monitors/tags/set \
+curl -s -X PUT $BASE/monitors/42/tags \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"monitor_id": 42, "tags": ["#magento"]}'
+  -d '{"tags": ["#magento"]}'
 
 # Remove a tag
-curl -s -X POST $BASE/monitors/tags/delete \
+curl -s -X DELETE $BASE/monitors/42/tags \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"monitor_id": 42, "tags": ["#magento"]}'
+  -d '{"tags": ["#magento"]}'
 
 # Replace all tags
-curl -s -X POST $BASE/monitors/tags/set \
+curl -s -X PUT $BASE/monitors/42/tags \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"monitor_id": 42, "tags": ["#wordpress", "#production"], "replace": true}'
+  -d '{"tags": ["#wordpress", "#production"], "replace": true}'
 
 # List all monitors
-curl -s -X POST $BASE/monitors/list \
+curl -s $BASE/monitors \
   -H "Authorization: Bearer $TOKEN"
 
 # Pause / resume
-curl -s -X POST $BASE/monitors/pause \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"monitor_id": 42}'
+curl -s -X POST $BASE/monitors/42/pause \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ---

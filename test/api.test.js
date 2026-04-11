@@ -135,6 +135,41 @@ test("POST /api/monitors/add validates required monitor", async () => {
   assert.equal(result.body.ok, false);
 });
 
+test("POST /api/monitors/add validates type-specific required fields", async () => {
+  const result = await request("/api/monitors/add", {
+    body: {
+      monitor: { type: "keyword", url: "https://example.com" },
+    },
+  });
+  assert.equal(result.response.status, 400);
+  assert.equal(result.body.ok, false);
+  assert.match(result.body.error, /requires field\(s\): keyword/);
+});
+
+test("POST /api/monitors/add auto-generates a push token", async () => {
+  const result = await request("/api/monitors/add", {
+    body: {
+      monitor: { type: "push", name: "Passive monitor" },
+    },
+  });
+  assert.equal(result.response.status, 200);
+  assert.equal(result.body.ok, true);
+  assert.equal(typeof result.body.result.monitor.pushToken, "string");
+  assert.equal(result.body.result.monitor.pushToken.length, 32);
+});
+
+test("POST /api/monitors/edit validates the merged monitor payload", async () => {
+  const result = await request("/api/monitors/edit", {
+    body: {
+      monitor_id: 1,
+      monitor: { type: "docker" },
+    },
+  });
+  assert.equal(result.response.status, 400);
+  assert.equal(result.body.ok, false);
+  assert.match(result.body.error, /requires field\(s\): docker_container, docker_host/);
+});
+
 test("POST /api/call validates required method", async () => {
   const result = await request("/api/call", { body: {} });
   assert.equal(result.response.status, 400);

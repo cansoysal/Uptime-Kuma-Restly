@@ -117,9 +117,27 @@ Agents extending the API should follow this order:
 6. Update docs:
    - [docs/REST-API.md](docs/REST-API.md)
    - [README.md](README.md) if usage changed
+   - [SKILL.md](SKILL.md) if agent-facing payload requirements changed
 7. Run:
    - `npm test`
    - `npm run check:socket-snapshot` if the change was driven by upstream socket drift
+
+## Monitor Payload Model
+
+This repo now maintains explicit per-type monitor payload requirements for `/api/monitors/add` and `/api/monitors/edit`.
+
+- Treat the model in [src/server.js](src/server.js) as source-backed compatibility logic, not a hand-written convenience schema.
+- When Uptime Kuma adds, removes, or changes monitor types or required fields, inspect upstream source first:
+  - `server/uptime-kuma-server.js`
+  - `server/server.js`
+  - `server/model/monitor.js`
+  - `src/pages/EditMonitor.vue`
+- Keep all of these in sync when changing monitor requirements:
+  - runtime validation in [src/server.js](src/server.js)
+  - OpenAPI schemas in [src/server.js](src/server.js)
+  - agent instructions in [SKILL.md](SKILL.md)
+  - user-facing guidance in [README.md](README.md) and [docs/REST-API.md](docs/REST-API.md)
+- Do not loosen required fields based only on older wrappers or third-party libraries if official Uptime Kuma source disagrees.
 
 ## API Design Rules
 

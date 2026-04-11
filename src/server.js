@@ -2,6 +2,7 @@
 
 const path = require("node:path");
 const process = require("node:process");
+const crypto = require("node:crypto");
 const express = require("express");
 const { io } = require("socket.io-client");
 const { authenticator } = require("otplib");
@@ -20,6 +21,8 @@ const KUMA_USERNAME = process.env.KUMA_USERNAME || "";
 const KUMA_PASSWORD = process.env.KUMA_PASSWORD || "";
 const KUMA_2FA_SECRET = (process.env.KUMA_2FA_SECRET || "").trim() || null;
 const KUMA_TIMEOUT = Number.parseInt(process.env.KUMA_TIMEOUT || "60", 10) * 1000;
+
+class ValidationError extends Error {}
 
 function isDebugEnabled() {
   return BRIDGE_LOG_LEVEL === "debug";
@@ -79,6 +82,463 @@ function getMissingColumnName(error) {
   const match = message.match(/no column named ([A-Za-z0-9_]+)/i);
   return match ? match[1] : null;
 }
+
+function hasMonitorValue(value) {
+  if (value === undefined || value === null) {
+    return false;
+  }
+  if (typeof value === "string") {
+    return value.trim() !== "";
+  }
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+  return true;
+}
+
+function generateSecret(length = 32) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const bytes = crypto.randomBytes(length);
+  let result = "";
+
+  for (const byte of bytes) {
+    result += alphabet[byte % alphabet.length];
+  }
+
+  return result;
+}
+
+const TAG_REFERENCE_SCHEMA = {
+  oneOf: [
+    { type: "integer", description: "Existing tag ID" },
+    { type: "string", description: "Tag name, for example '#production'" },
+    {
+      type: "object",
+      properties: {
+        id: { type: "integer" },
+        name: { type: "string" },
+        value: { type: "string" },
+      },
+      additionalProperties: true,
+    },
+  ],
+};
+
+const MONITOR_SHARED_PROPERTIES = {
+  type: { type: "string" },
+  name: { type: "string" },
+  parent: { type: "integer", nullable: true },
+  description: { type: "string" },
+  active: { type: "boolean" },
+  interval: { type: "integer", minimum: 1 },
+  retryInterval: { type: "integer", minimum: 1 },
+  resendInterval: { type: "integer", minimum: 0 },
+  maxretries: { type: "integer", minimum: 0 },
+  notificationIDList: {
+    type: "object",
+    additionalProperties: { type: "boolean" },
+  },
+  notifications: {
+    oneOf: [
+      { type: "array", items: { type: "integer" } },
+      { type: "object", additionalProperties: { type: "boolean" } },
+    ],
+  },
+  tags: {
+    type: "array",
+    items: TAG_REFERENCE_SCHEMA,
+  },
+  url: { type: "string" },
+  hostname: { type: "string" },
+  port: { type: "integer", minimum: 0, maximum: 65535 },
+  keyword: { type: "string" },
+  invertKeyword: { type: "boolean" },
+  dns_resolve_server: { type: "string" },
+  dns_resolve_type: { type: "string" },
+  docker_container: { type: "string" },
+  docker_host: { oneOf: [{ type: "integer" }, { type: "string" }] },
+  remote_browser: { oneOf: [{ type: "integer" }, { type: "string" }], nullable: true },
+  subtype: { type: "string" },
+  location: { type: "string" },
+  protocol: { type: "string", nullable: true },
+  game: { type: "string" },
+  pushToken: { type: "string" },
+  manual_status: { type: "integer", enum: [0, 1] },
+  system_service_name: { type: "string" },
+  wsSubprotocol: { type: "string" },
+  wsIgnoreSecWebsocketAcceptHeader: { type: "boolean" },
+  accepted_statuscodes: {
+    type: "array",
+    items: { type: "string" },
+  },
+  method: { type: "string" },
+  body: { type: "string", nullable: true },
+  headers: {
+    oneOf: [
+      { type: "string", description: "JSON string" },
+      { type: "object", additionalProperties: true },
+    ],
+  },
+  ipFamily: { type: "string", nullable: true },
+  ignoreTls: { type: "boolean" },
+  expiryNotification: { type: "boolean" },
+  domainExpiryNotification: { type: "boolean" },
+  upsideDown: { type: "boolean" },
+  packetSize: { type: "integer" },
+  ping_count: { type: "integer" },
+  ping_per_request_timeout: { type: "integer" },
+  ping_numeric: { type: "boolean" },
+  maxredirects: { type: "integer", minimum: 0 },
+  saveResponse: { type: "boolean" },
+  saveErrorResponse: { type: "boolean" },
+  responseMaxLength: { type: "integer", minimum: 0 },
+  response_max_length: { type: "integer", minimum: 0 },
+  proxyId: { type: "integer", nullable: true },
+  authMethod: { type: "string", nullable: true },
+  basic_auth_user: { type: "string" },
+  basic_auth_pass: { type: "string" },
+  oauth_auth_method: { type: "string" },
+  oauth_token_url: { type: "string" },
+  oauth_client_id: { type: "string" },
+  oauth_client_secret: { type: "string" },
+  oauth_scopes: { type: "string" },
+  oauth_audience: { type: "string" },
+  tlsCa: { type: "string" },
+  tlsCert: { type: "string" },
+  tlsKey: { type: "string" },
+  cacheBust: { type: "boolean" },
+  grpcUrl: { type: "string" },
+  grpcEnableTls: { type: "boolean" },
+  grpcServiceName: { type: "string" },
+  grpcMethod: { type: "string" },
+  grpcProtobuf: { type: "string" },
+  grpcBody: { type: "string" },
+  grpcMetadata: {
+    oneOf: [
+      { type: "string", description: "JSON string" },
+      { type: "object", additionalProperties: true },
+    ],
+  },
+  mqttUsername: { type: "string" },
+  mqttPassword: { type: "string" },
+  mqttTopic: { type: "string" },
+  mqttSuccessMessage: { type: "string" },
+  mqttCheckType: { type: "string" },
+  mqttWebsocketPath: { type: "string" },
+  jsonPath: { type: "string" },
+  jsonPathOperator: { type: "string" },
+  expectedValue: {},
+  kafkaProducerBrokers: {
+    type: "array",
+    items: { type: "string" },
+  },
+  kafkaProducerTopic: { type: "string" },
+  kafkaProducerMessage: { type: "string" },
+  kafkaProducerSsl: { type: "boolean" },
+  kafkaProducerAllowAutoTopicCreation: { type: "boolean" },
+  kafkaProducerSaslOptions: {
+    type: "object",
+    additionalProperties: true,
+    properties: {
+      mechanism: { type: "string" },
+      username: { type: "string" },
+      password: { type: "string" },
+      authorizationIdentity: { type: "string" },
+      accessKeyId: { type: "string" },
+      secretAccessKey: { type: "string" },
+      sessionToken: { type: "string" },
+    },
+  },
+  rabbitmqNodes: {
+    type: "array",
+    items: { type: "string" },
+  },
+  rabbitmqUsername: { type: "string" },
+  rabbitmqPassword: { type: "string" },
+  smtpSecurity: { type: "string", nullable: true },
+  snmpOid: { type: "string" },
+  snmpVersion: { type: "string" },
+  snmpV3Username: { type: "string" },
+  radiusUsername: { type: "string" },
+  radiusPassword: { type: "string" },
+  radiusSecret: { type: "string" },
+  radiusCalledStationId: { type: "string" },
+  radiusCallingStationId: { type: "string" },
+  databaseConnectionString: { type: "string" },
+  databaseQuery: {
+    oneOf: [
+      { type: "string" },
+      { type: "object", additionalProperties: true },
+    ],
+  },
+  gamedigGivenPortOnly: { type: "boolean" },
+  screenshot_delay: { type: "integer", minimum: 0 },
+};
+
+const MONITOR_TYPE_DEFINITIONS = {
+  http: {
+    description: "HTTP monitor",
+    required: ["url"],
+  },
+  keyword: {
+    description: "HTTP keyword monitor",
+    required: ["url", "keyword"],
+  },
+  "json-query": {
+    description: "HTTP JSON query monitor",
+    required: ["url", "jsonPath", "jsonPathOperator", "expectedValue"],
+  },
+  port: {
+    description: "TCP port monitor",
+    required: ["hostname", "port"],
+  },
+  ping: {
+    description: "Ping monitor",
+    required: ["hostname"],
+  },
+  dns: {
+    description: "DNS monitor",
+    required: ["hostname", "dns_resolve_server", "port"],
+  },
+  docker: {
+    description: "Docker container monitor",
+    required: ["docker_container", "docker_host"],
+  },
+  "system-service": {
+    description: "System service monitor",
+    required: ["system_service_name"],
+  },
+  "real-browser": {
+    description: "Browser engine monitor",
+    required: ["url"],
+  },
+  group: {
+    description: "Monitor group",
+    required: [],
+  },
+  push: {
+    description: "Push monitor",
+    required: [],
+  },
+  manual: {
+    description: "Manual monitor",
+    required: [],
+  },
+  "globalping:ping": {
+    description: "Globalping ping monitor",
+    required: ["subtype", "hostname", "protocol"],
+  },
+  "globalping:http": {
+    description: "Globalping HTTP monitor",
+    required: ["subtype", "url", "protocol"],
+  },
+  "globalping:dns": {
+    description: "Globalping DNS monitor",
+    required: ["subtype", "hostname", "port", "protocol"],
+  },
+  "grpc-keyword": {
+    description: "gRPC keyword monitor",
+    required: ["grpcUrl", "keyword", "grpcServiceName", "grpcMethod"],
+  },
+  "kafka-producer": {
+    description: "Kafka producer monitor",
+    required: ["kafkaProducerBrokers", "kafkaProducerTopic", "kafkaProducerMessage"],
+  },
+  mqtt: {
+    description: "MQTT monitor",
+    required: ["hostname", "mqttTopic"],
+  },
+  rabbitmq: {
+    description: "RabbitMQ monitor",
+    required: ["rabbitmqNodes", "rabbitmqUsername", "rabbitmqPassword"],
+  },
+  "sip-options": {
+    description: "SIP OPTIONS monitor",
+    required: ["hostname", "port"],
+  },
+  smtp: {
+    description: "SMTP monitor",
+    required: ["hostname", "port"],
+  },
+  snmp: {
+    description: "SNMP monitor",
+    required: ["hostname", "port", "radiusPassword", "snmpOid", "jsonPath", "jsonPathOperator", "expectedValue"],
+  },
+  "tailscale-ping": {
+    description: "Tailscale ping monitor",
+    required: ["hostname"],
+  },
+  "websocket-upgrade": {
+    description: "Websocket upgrade monitor",
+    required: ["url"],
+  },
+  sqlserver: {
+    description: "Microsoft SQL Server monitor",
+    required: ["databaseConnectionString"],
+  },
+  mongodb: {
+    description: "MongoDB monitor",
+    required: ["databaseConnectionString"],
+  },
+  mysql: {
+    description: "MySQL/MariaDB monitor",
+    required: ["databaseConnectionString"],
+  },
+  oracledb: {
+    description: "Oracle Database monitor",
+    required: ["databaseConnectionString", "basic_auth_user", "basic_auth_pass"],
+  },
+  postgres: {
+    description: "PostgreSQL monitor",
+    required: ["databaseConnectionString"],
+  },
+  radius: {
+    description: "Radius monitor",
+    required: [
+      "hostname",
+      "port",
+      "radiusUsername",
+      "radiusPassword",
+      "radiusSecret",
+      "radiusCalledStationId",
+      "radiusCallingStationId",
+    ],
+  },
+  redis: {
+    description: "Redis monitor",
+    required: ["databaseConnectionString"],
+  },
+  gamedig: {
+    description: "GameDig monitor",
+    required: ["hostname", "port", "game"],
+  },
+  steam: {
+    description: "Steam server monitor",
+    required: ["hostname", "port"],
+  },
+};
+
+function getMonitorDefinitionKey(monitor) {
+  const type = String(monitor?.type || "http");
+  if (type === "globalping") {
+    return `globalping:${monitor?.subtype || ""}`;
+  }
+  return type;
+}
+
+function getMonitorRequiredFields(monitor) {
+  const definition = MONITOR_TYPE_DEFINITIONS[getMonitorDefinitionKey(monitor)];
+  if (!definition) {
+    return null;
+  }
+
+  const required = [...definition.required];
+
+  if (monitor.type === "mqtt" && monitor.mqttCheckType === "json-query") {
+    required.push("jsonPath", "expectedValue");
+  }
+
+  if (monitor.type === "snmp" && monitor.snmpVersion === "3") {
+    required.push("snmpV3Username");
+  }
+
+  const httpAuthEligible = new Set(["http", "keyword", "json-query"]);
+  const isGlobalpingHttp = monitor.type === "globalping" && monitor.subtype === "http";
+  if (httpAuthEligible.has(monitor.type) || isGlobalpingHttp) {
+    if (monitor.authMethod === "mtls") {
+      required.push("tlsCert", "tlsKey");
+    }
+    if (monitor.authMethod === "oauth2-cc") {
+      required.push("oauth_token_url", "oauth_client_id", "oauth_client_secret");
+    }
+  }
+
+  if (monitor.type === "kafka-producer" && monitor.kafkaProducerSaslOptions?.mechanism === "aws") {
+    required.push(
+      "kafkaProducerSaslOptions.authorizationIdentity",
+      "kafkaProducerSaslOptions.accessKeyId",
+      "kafkaProducerSaslOptions.secretAccessKey",
+    );
+  }
+
+  return required;
+}
+
+function getNestedValue(target, fieldPath) {
+  return fieldPath.split(".").reduce((value, segment) => value?.[segment], target);
+}
+
+function validateMonitorPayload(monitor, { existingMonitor = null, mode = "add" } = {}) {
+  const effective = { ...(existingMonitor || {}), ...monitor };
+
+  if (!effective.type) {
+    effective.type = mode === "add" ? "http" : existingMonitor?.type;
+  }
+
+  const definitionKey = getMonitorDefinitionKey(effective);
+  const definition = MONITOR_TYPE_DEFINITIONS[definitionKey];
+  if (!definition) {
+    const supported = Object.keys(MONITOR_TYPE_DEFINITIONS)
+      .map((key) => key.replace(/^globalping:/, "globalping/"))
+      .join(", ");
+    throw new ValidationError(`Unsupported monitor type '${effective.type}'. Supported types: ${supported}`);
+  }
+
+  const requiredFields = getMonitorRequiredFields(effective) || [];
+  const missingFields = requiredFields.filter((fieldPath) => !hasMonitorValue(getNestedValue(effective, fieldPath)));
+
+  if (missingFields.length > 0) {
+    throw new ValidationError(`Monitor type '${effective.type}' requires field(s): ${missingFields.join(", ")}`);
+  }
+
+  if (effective.type === "push" && mode === "add" && !hasMonitorValue(effective.pushToken)) {
+    effective.pushToken = generateSecret();
+  }
+
+  return effective;
+}
+
+async function prepareAddMonitorPayload(monitor) {
+  return validateMonitorPayload(normalizeMonitor(monitor), { mode: "add" });
+}
+
+async function prepareEditMonitorPayload(client, monitorId, monitor) {
+  const monitors = await client.getMonitors();
+  const existing = monitors[String(monitorId)] || monitors[monitorId] || {};
+  return validateMonitorPayload(normalizeMonitor(monitor), { existingMonitor: existing, mode: "edit" });
+}
+
+function buildMonitorTypeSchema(typeKey, definition) {
+  const [type, subtype] = typeKey.split(":");
+  const required = ["type", ...definition.required.filter((field) => !field.includes("."))];
+
+  if (subtype) {
+    required.push("subtype");
+  }
+
+  return {
+    type: "object",
+    additionalProperties: true,
+    description: `${definition.description}. Required fields: ${definition.required.join(", ") || "none"}.`,
+    properties: {
+      ...MONITOR_SHARED_PROPERTIES,
+      type: { type: "string", enum: [type] },
+      ...(subtype ? { subtype: { type: "string", enum: [subtype] } } : {}),
+    },
+    required,
+  };
+}
+
+const MONITOR_TYPE_SCHEMAS = Object.fromEntries(
+  Object.entries(MONITOR_TYPE_DEFINITIONS).map(([typeKey, definition]) => [
+    `Monitor${typeKey.replace(/(^|[:-])([a-z])/g, (_match, _sep, letter) => letter.toUpperCase())}Payload`,
+    buildMonitorTypeSchema(typeKey, definition),
+  ]),
+);
+
+const MONITOR_TYPE_SCHEMA_REFS = Object.keys(MONITOR_TYPE_SCHEMAS).map((schemaName) => ({
+  $ref: `#/components/schemas/${schemaName}`,
+}));
 
 function normalizeMonitor(monitor) {
   const next = { ...monitor };
@@ -628,7 +1088,8 @@ class KumaClient {
   }
 
   async addMonitor(monitor) {
-    const payload = { ...this.monitorDefaults(), ...monitor };
+    const validated = validateMonitorPayload(monitor, { mode: "add" });
+    const payload = { ...this.monitorDefaults(), ...validated };
     const tags = payload.tags;
     delete payload.tags;
     const result = await this.retryWithoutMissingColumns(payload, async (safePayload) => {
@@ -651,7 +1112,8 @@ class KumaClient {
   async editMonitor(monitorId, monitor) {
     const monitors = await this.getMonitors();
     const existing = monitors[String(monitorId)] || monitors[monitorId] || {};
-    const payload = { ...existing, ...monitor, id: monitorId };
+    const validated = validateMonitorPayload(monitor, { existingMonitor: existing, mode: "edit" });
+    const payload = { ...existing, ...validated, id: monitorId };
     const tags = payload.tags;
     delete payload.tags;
     const result = await this.retryWithoutMissingColumns(payload, async (safePayload) => {
@@ -1016,7 +1478,7 @@ function asyncRoute(handler) {
     try {
       await handler(req, res);
     } catch (error) {
-      res.status(500).json({
+      res.status(error instanceof ValidationError ? 400 : 500).json({
         ok: false,
         error: error instanceof Error ? error.message : String(error),
         trace: error instanceof Error && error.stack ? error.stack.split("\n").slice(0, 15).join("\n") : undefined,
@@ -1059,7 +1521,8 @@ api.post("/monitors/add", asyncRoute(async (req, res) => {
     return;
   }
   const client = await pool.get();
-  res.json({ ok: true, result: await client.addMonitor(normalizeMonitor(monitor)) });
+  const prepared = await prepareAddMonitorPayload(monitor);
+  res.json({ ok: true, result: await client.addMonitor(prepared) });
 }));
 
 api.post("/monitors/edit", asyncRoute(async (req, res) => {
@@ -1070,7 +1533,8 @@ api.post("/monitors/edit", asyncRoute(async (req, res) => {
   }
   const monitorId = parseMonitorId(req.body?.monitor_id);
   const client = await pool.get();
-  res.json({ ok: true, result: await client.editMonitor(monitorId, normalizeMonitor(monitor)) });
+  const prepared = await prepareEditMonitorPayload(client, monitorId, monitor);
+  res.json({ ok: true, result: await client.editMonitor(monitorId, prepared) });
 }));
 
 api.post("/monitors/delete", asyncRoute(async (req, res) => {
@@ -1347,6 +1811,16 @@ const openApiSpec = {
           trace: { type: "string" },
         },
       },
+      MonitorAddPayload: {
+        oneOf: MONITOR_TYPE_SCHEMA_REFS,
+      },
+      MonitorEditPatchPayload: {
+        type: "object",
+        additionalProperties: true,
+        properties: MONITOR_SHARED_PROPERTIES,
+        description: "Partial monitor update. The bridge merges this patch with the existing monitor and then validates the final payload against the selected monitor type.",
+      },
+      ...MONITOR_TYPE_SCHEMAS,
     },
   },
   security: BRIDGE_TOKEN ? [{ bearerAuth: [] }] : [],
@@ -1395,7 +1869,7 @@ const openApiSpec = {
               schema: {
                 type: "object",
                 properties: {
-                  monitor: { type: "object" },
+                  monitor: { $ref: "#/components/schemas/MonitorAddPayload" },
                 },
                 required: ["monitor"],
               },
@@ -1416,7 +1890,12 @@ const openApiSpec = {
                 type: "object",
                 properties: {
                   monitor_id: { type: "integer" },
-                  monitor: { type: "object" },
+                  monitor: {
+                    anyOf: [
+                      { $ref: "#/components/schemas/MonitorEditPatchPayload" },
+                      { $ref: "#/components/schemas/MonitorAddPayload" },
+                    ],
+                  },
                 },
                 required: ["monitor_id", "monitor"],
               },

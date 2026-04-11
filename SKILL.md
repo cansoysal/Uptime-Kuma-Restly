@@ -24,6 +24,14 @@ All requests **MUST** include the `Authorization` header with the token provided
 The base path for all API calls is `/api`. 
 *Example: `http://<host>:<port>/api/monitors/list`*
 
+### 📘 Canonical Monitor Type Reference
+
+Agents should treat the repository monitor type map as required reading before creating or editing monitors:
+
+- [docs/MONITOR-TYPES.md](docs/MONITOR-TYPES.md)
+
+If the skill instructions and that document ever diverge, prefer `docs/MONITOR-TYPES.md` and update the skill text to match before continuing.
+
 ---
 
 ## 📋 API Reference
@@ -38,12 +46,69 @@ The base path for all API calls is `/api`.
 | Endpoint | Method | Payload/Description |
 |----------|--------|---------------------|
 | `/monitors/list` | `POST` | Returns all monitors as a dictionary keyed by ID. |
-| `/monitors/add` | `POST` | **Payload:** `{"monitor": {"name": "...", "url": "...", "tags": [...]}}` |
-| `/monitors/edit` | `POST` | **Payload:** `{"monitor_id": 42, "monitor": {"name": "..."}}` (Merges changes). |
+| `/monitors/add` | `POST` | **Payload:** `{"monitor": {...}}` where `monitor.type` controls which fields are required. |
+| `/monitors/edit` | `POST` | **Payload:** `{"monitor_id": 42, "monitor": {...}}`. The patch is merged with the existing monitor, then validated against that monitor type. |
 | `/monitors/delete`| `POST` | **Payload:** `{"monitor_id": 42}` |
 | `/monitors/pause` | `POST` | **Payload:** `{"monitor_id": 42}` |
 | `/monitors/resume`| `POST` | **Payload:** `{"monitor_id": 42}` |
 | `/monitors/status`| `POST` | **Payload:** `{"monitor_id": 42}` (Returns heartbeat list). |
+
+### 🧩 Monitor Type Required Fields
+Use these minimum fields inside `monitor` for `/monitors/add`. For `/monitors/edit`, the final merged monitor must satisfy the same rules.
+
+This section mirrors [docs/MONITOR-TYPES.md](docs/MONITOR-TYPES.md) so the skill remains usable even when the agent only has the skill file open.
+
+| Monitor Type | Required Fields |
+|-------------|-----------------|
+| `http` | `url` |
+| `keyword` | `url`, `keyword` |
+| `json-query` | `url`, `jsonPath`, `jsonPathOperator`, `expectedValue` |
+| `port` | `hostname`, `port` |
+| `ping` | `hostname` |
+| `dns` | `hostname`, `dns_resolve_server`, `port` |
+| `docker` | `docker_container`, `docker_host` |
+| `system-service` | `system_service_name` |
+| `real-browser` | `url` |
+| `group` | no extra type-specific fields |
+| `push` | no extra type-specific fields; the bridge auto-generates `pushToken` if omitted |
+| `manual` | no extra type-specific fields |
+| `globalping` + `subtype: "ping"` | `subtype`, `hostname`, `protocol` |
+| `globalping` + `subtype: "http"` | `subtype`, `url`, `protocol` |
+| `globalping` + `subtype: "dns"` | `subtype`, `hostname`, `port`, `protocol` |
+| `grpc-keyword` | `grpcUrl`, `keyword`, `grpcServiceName`, `grpcMethod` |
+| `kafka-producer` | `kafkaProducerBrokers`, `kafkaProducerTopic`, `kafkaProducerMessage` |
+| `mqtt` | `hostname`, `mqttTopic` |
+| `mqtt` with `mqttCheckType: "json-query"` | `hostname`, `mqttTopic`, `jsonPath`, `expectedValue` |
+| `rabbitmq` | `rabbitmqNodes`, `rabbitmqUsername`, `rabbitmqPassword` |
+| `sip-options` | `hostname`, `port` |
+| `smtp` | `hostname`, `port` |
+| `snmp` | `hostname`, `port`, `radiusPassword`, `snmpOid`, `jsonPath`, `jsonPathOperator`, `expectedValue` |
+| `snmp` with `snmpVersion: "3"` | all SNMP fields above plus `snmpV3Username` |
+| `tailscale-ping` | `hostname` |
+| `websocket-upgrade` | `url` |
+| `sqlserver` | `databaseConnectionString` |
+| `mongodb` | `databaseConnectionString` |
+| `mysql` | `databaseConnectionString` |
+| `oracledb` | `databaseConnectionString`, `basic_auth_user`, `basic_auth_pass` |
+| `postgres` | `databaseConnectionString` |
+| `radius` | `hostname`, `port`, `radiusUsername`, `radiusPassword`, `radiusSecret`, `radiusCalledStationId`, `radiusCallingStationId` |
+| `redis` | `databaseConnectionString` |
+| `gamedig` | `hostname`, `port`, `game` |
+| `steam` | `hostname`, `port` |
+
+### 🔐 Conditional Auth Fields
+For `http`, `keyword`, `json-query`, and `globalping` HTTP monitors:
+
+| Condition | Required Fields |
+|----------|-----------------|
+| `authMethod: "mtls"` | `tlsCert`, `tlsKey` |
+| `authMethod: "oauth2-cc"` | `oauth_token_url`, `oauth_client_id`, `oauth_client_secret` |
+
+For `kafka-producer` with `kafkaProducerSaslOptions.mechanism: "aws"`:
+
+| Condition | Required Fields |
+|----------|-----------------|
+| AWS SASL | `kafkaProducerSaslOptions.authorizationIdentity`, `kafkaProducerSaslOptions.accessKeyId`, `kafkaProducerSaslOptions.secretAccessKey` |
 
 ### 🏷️ Tagging
 | Endpoint | Method | Description |

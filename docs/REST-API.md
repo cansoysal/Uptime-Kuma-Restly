@@ -79,7 +79,9 @@ Compatibility notes
 
 - The bridge keeps legacy root-path aliases for the same endpoints, but `/api` is the intended public base path.
 - The bridge aligns to current official Uptime Kuma Socket.IO event names where possible.
-- For monitor add/edit, the bridge now retries after removing unsupported fields when an older Kuma schema reports `no column named ...`.
+- For monitor add/edit, the bridge validates the final payload against the selected monitor type before calling Kuma.
+- For monitor add/edit, the bridge retries after removing unsupported fields when an older Kuma schema reports `no column named ...`.
+- Push monitors get an auto-generated `pushToken` if the payload omits one.
 
 Authentication
 
@@ -91,5 +93,7 @@ References
 
 - Implementation source:
   - [src/server.js](../src/server.js)
+- Monitor type and required field reference:
+  - [MONITOR-TYPES.md](MONITOR-TYPES.md)
 - Generated OpenAPI document:
   - `/api/openapi.json`

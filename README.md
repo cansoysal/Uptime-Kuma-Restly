@@ -11,6 +11,7 @@ Primary paths:
 Documentation:
 
 - [docs/REST-API.md](docs/REST-API.md)
+- [docs/MONITOR-TYPES.md](docs/MONITOR-TYPES.md)
 - [docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md](docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md)
 - [docs/IMAGE-TAGS.md](docs/IMAGE-TAGS.md)
 
@@ -52,6 +53,53 @@ Uptime Kuma's API is Socket.IO only — there is no official HTTP REST API. This
 - Automatically create monitors when you deploy a new site
 - Tag monitors by project, client, or technology stack
 - Integrate with CI/CD pipelines, CRM systems, or any tool that can make HTTP requests
+
+## Monitor Payload Rules
+
+Monitor create and edit requests are validated against the selected Uptime Kuma monitor type.
+
+- `POST /api/monitors/add` requires a `monitor.type`-appropriate payload.
+- `POST /api/monitors/edit` merges your patch into the existing monitor, then validates the final payload.
+- Push monitors get a generated `pushToken` automatically if you do not send one.
+
+Examples:
+
+```json
+{
+  "monitor": {
+    "type": "http",
+    "name": "Example",
+    "url": "https://example.com"
+  }
+}
+```
+
+```json
+{
+  "monitor": {
+    "type": "keyword",
+    "name": "Homepage keyword",
+    "url": "https://example.com",
+    "keyword": "Example Domain"
+  }
+}
+```
+
+```json
+{
+  "monitor": {
+    "type": "docker",
+    "name": "nginx container",
+    "docker_container": "nginx",
+    "docker_host": 1
+  }
+}
+```
+
+The full per-type required field list is documented in:
+
+- [SKILL.md](SKILL.md)
+- [docs/REST-API.md](docs/REST-API.md)
 
 ---
 

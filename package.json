@@ -1,5 +1,5 @@
 {
-  "name": "uptime-kuma-api-v2",
+  "name": "uptime-kuma-restly",
   "version": "0.1.0",
   "private": true,
   "description": "HTTP bridge for Uptime Kuma using its internal Socket.IO API",

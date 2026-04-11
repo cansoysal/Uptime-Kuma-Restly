@@ -1,12 +1,12 @@
 services:
-  uptime-kuma-bridge:
+  uptime-kuma-restly-combined:
     build:
       context: .
       dockerfile: docker/combined.Dockerfile
       args:
         UPTIME_KUMA_TAG: ${UPTIME_KUMA_TAG:-2}
-    image: uptime-kuma-bridge:latest
-    container_name: uptime-kuma-bridge
+    image: uptime-kuma-restly-combined:latest
+    container_name: uptime-kuma-restly-combined
     restart: unless-stopped
     ports:
       - "3001:3001"

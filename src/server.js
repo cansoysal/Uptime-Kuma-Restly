@@ -1317,12 +1317,12 @@ api.post("/call", asyncRoute(async (req, res) => {
 const openApiSpec = {
   openapi: "3.0.3",
   info: {
-    title: "Uptime Kuma HTTP Bridge API",
+    title: "Uptime Kuma Restly API",
     version: "0.1.0",
-    description: "REST bridge for Uptime Kuma's internal Socket.IO API.",
+    description: "Uptime Kuma Restly exposes a REST API over Uptime Kuma's internal Socket.IO API.",
   },
   servers: [
-    { url: "/api", description: "Bridge API root" },
+    { url: "/api", description: "Uptime Kuma Restly API root" },
   ],
   components: {
     securitySchemes: {

@@ -1,16 +1,16 @@
 <?xml version="1.0"?>
 <Container version="2">
-  <Name>Uptime Kuma Bridge Only</Name>
-  <Repository>ghcr.io/your-user/uptime-kuma-api-v2:latest</Repository>
+  <Name>Uptime Kuma Restly</Name>
+  <Repository>ghcr.io/your-user/uptime-kuma-restly:latest</Repository>
   <Registry>https://ghcr.io</Registry>
   <Network>bridge</Network>
   <MyIP/>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
-  <Support>https://github.com/your-user/uptime-kuma-api-v2</Support>
-  <Project>https://github.com/your-user/uptime-kuma-api-v2</Project>
+  <Support>https://github.com/your-user/uptime-kuma-restly</Support>
+  <Project>https://github.com/your-user/uptime-kuma-restly</Project>
   <Overview>
-Standalone REST bridge for an existing Uptime Kuma instance.
+Uptime Kuma Restly for an existing Uptime Kuma instance.
 
 Exposes:
 - REST API bridge on port 9911
@@ -29,7 +29,7 @@ Before publishing this template, replace the placeholder GitHub and container im
   <DateInstalled/>
   <DonateText/>
   <DonateLink/>
-  <Description>REST bridge for managing an external Uptime Kuma instance through HTTP and Swagger docs.</Description>
+  <Description>Uptime Kuma Restly adds an HTTP API and Swagger docs for managing an external Uptime Kuma instance.</Description>
 
   <Config Name="Bridge API Port" Target="9911" Default="9911" Mode="tcp" Description="Port for the REST bridge API and Swagger docs." Type="Port" Display="always" Required="true" Mask="false">9911</Config>
 

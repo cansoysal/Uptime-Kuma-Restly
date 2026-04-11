@@ -1,10 +1,10 @@
 services:
-  uptime-kuma-api-v2:
+  uptime-kuma-restly:
     build:
       context: .
       dockerfile: Dockerfile
-    image: uptime-kuma-api-v2:latest
-    container_name: uptime-kuma-api-v2
+    image: uptime-kuma-restly:latest
+    container_name: uptime-kuma-restly
     restart: unless-stopped
     ports:
       - "9911:9911"

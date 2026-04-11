@@ -1,16 +1,16 @@
 <?xml version="1.0"?>
 <Container version="2">
-  <Name>Uptime Kuma Bridge</Name>
-  <Repository>ghcr.io/your-user/uptime-kuma-bridge:latest</Repository>
+  <Name>Uptime Kuma Restly Combined</Name>
+  <Repository>ghcr.io/your-user/uptime-kuma-restly-combined:latest</Repository>
   <Registry>https://ghcr.io</Registry>
   <Network>bridge</Network>
   <MyIP/>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
-  <Support>https://github.com/your-user/uptime-kuma-api-v2</Support>
-  <Project>https://github.com/your-user/uptime-kuma-api-v2</Project>
+  <Support>https://github.com/your-user/uptime-kuma-restly</Support>
+  <Project>https://github.com/your-user/uptime-kuma-restly</Project>
   <Overview>
-Combined Uptime Kuma plus REST bridge container.
+Combined Uptime Kuma Restly container.
 
 Exposes:
 - Uptime Kuma UI on port 3001
@@ -28,11 +28,11 @@ Before publishing this template, replace the placeholder GitHub and container im
   <DateInstalled/>
   <DonateText/>
   <DonateLink/>
-  <Description>Uptime Kuma bundled with a REST bridge for monitor management and Swagger docs.</Description>
+  <Description>Uptime Kuma Restly bundles Uptime Kuma with an HTTP API and Swagger docs for monitor management.</Description>
 
   <Config Name="Kuma UI Port" Target="3001" Default="3001" Mode="tcp" Description="Port for the Uptime Kuma web UI." Type="Port" Display="always" Required="true" Mask="false">3001</Config>
   <Config Name="Bridge API Port" Target="9911" Default="9911" Mode="tcp" Description="Port for the REST bridge API and Swagger docs." Type="Port" Display="always" Required="true" Mask="false">9911</Config>
-  <Config Name="AppData" Target="/app/data" Default="/mnt/user/appdata/uptime-kuma-bridge" Mode="rw" Description="Persistent storage for Uptime Kuma data." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/uptime-kuma-bridge</Config>
+  <Config Name="AppData" Target="/app/data" Default="/mnt/user/appdata/uptime-kuma-restly" Mode="rw" Description="Persistent storage for Uptime Kuma data." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/uptime-kuma-restly</Config>
 
   <Config Name="BRIDGE_HOST" Target="BRIDGE_HOST" Default="0.0.0.0" Mode="" Description="Bridge bind address inside the container." Type="Variable" Display="advanced" Required="true" Mask="false">0.0.0.0</Config>
   <Config Name="BRIDGE_PORT" Target="BRIDGE_PORT" Default="9911" Mode="" Description="Internal port used by the REST bridge." Type="Variable" Display="advanced" Required="true" Mask="false">9911</Config>

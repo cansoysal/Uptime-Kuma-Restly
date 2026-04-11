@@ -1,6 +1,6 @@
-# Uptime Kuma HTTP Bridge
+# Uptime Kuma Restly
 
-A lightweight Node.js HTTP bridge that exposes [Uptime Kuma](https://github.com/louislam/uptime-kuma) as a simple REST-like API. Manage monitors, tags, and status checks from any language or tool using plain HTTP instead of talking to Socket.IO directly.
+A lightweight Node.js service that exposes [Uptime Kuma](https://github.com/louislam/uptime-kuma) as a simple REST-like API. Manage monitors, tags, and status checks from any language or tool using plain HTTP instead of talking to Socket.IO directly.
 
 Primary paths:
 
@@ -30,7 +30,7 @@ This project is derived from the original Python bridge by `pr1ncey1987`:
 
 - Original repository: https://github.com/pr1ncey1987/uptime-kuma-api-v2
 
-This fork ports the bridge to Node.js and adds Docker packaging, including a combined Uptime Kuma + bridge container layout intended for homelab and Unraid-style deployments.
+Uptime Kuma Restly ports the bridge to Node.js and adds Docker packaging, including a combined Uptime Kuma + Restly container layout intended for homelab and Unraid-style deployments.
 It also documents the current official Uptime Kuma Socket.IO surface from source snapshots instead of relying only on older third-party wrapper docs.
 
 ## Features
@@ -70,8 +70,8 @@ npm install
 ## Installation
 
 ```bash
-git clone https://github.com/<your-user>/uptime-kuma-api-v2.git
-cd uptime-kuma-api-v2
+git clone https://github.com/<your-user>/uptime-kuma-restly.git
+cd uptime-kuma-restly
 cp .env.example .env
 # Edit .env with your settings
 npm install
@@ -152,7 +152,7 @@ To run as a background service, use `systemd`, `supervisor`, Docker, or a proces
 Build the image:
 
 ```bash
-docker build -t uptime-kuma-api-v2 .
+docker build -t uptime-kuma-restly .
 ```
 
 Run it with an env file:
@@ -160,16 +160,16 @@ Run it with an env file:
 ```bash
 docker run --rm -p 9911:9911 \
   --env-file .env \
-  uptime-kuma-api-v2
+  uptime-kuma-restly
 ```
 
 Example `docker-compose.yml` snippet:
 
 ```yaml
 services:
-  uptime-kuma-api-v2:
+  uptime-kuma-restly:
     build: .
-    container_name: uptime-kuma-api-v2
+    container_name: uptime-kuma-restly
     restart: unless-stopped
     ports:
       - "9911:9911"
@@ -210,7 +210,7 @@ Primary health endpoints in the combined image:
 Build it with:
 
 ```bash
-docker build -f docker/combined.Dockerfile -t kuma-rest-combined .
+docker build -f docker/combined.Dockerfile -t uptime-kuma-restly-combined .
 ```
 
 To pin a specific Kuma base tag at build time:
@@ -219,7 +219,7 @@ To pin a specific Kuma base tag at build time:
 docker build \
   -f docker/combined.Dockerfile \
   --build-arg UPTIME_KUMA_TAG=2 \
-  -t kuma-rest-combined .
+  -t uptime-kuma-restly-combined .
 ```
 
 Suggested env for the combined image:
@@ -260,12 +260,12 @@ Suggested run command:
 
 ```bash
 docker run -d \
-  --name kuma-rest-combined \
+  --name uptime-kuma-restly-combined \
   -p 3001:3001 \
   -p 9911:9911 \
   -v kuma-data:/app/data \
   --env-file .env \
-  kuma-rest-combined
+  uptime-kuma-restly-combined
 ```
 
 Compose example:

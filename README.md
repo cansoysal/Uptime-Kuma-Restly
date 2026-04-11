@@ -313,6 +313,10 @@ Notes for Unraid:
 - The bridge depends on Kuma's internal Socket.IO API, so bridge compatibility should be versioned alongside Kuma.
 - Replace the placeholder image/repo/support URLs in the XML before submitting to Community Apps.
 
+### OpenClaw Skill
+
+A complementary skill designed for the `app/docker bridge app`. This skill enables enhanced automation and interaction capabilities when using the bridge container, providing a more powerful way to interface with your Uptime Kuma instance.
+
 ---
 
 ## Authentication

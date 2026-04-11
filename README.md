@@ -1,16 +1,39 @@
 # Uptime Kuma HTTP Bridge
 
-A lightweight Python HTTP bridge that exposes [Uptime Kuma](https://github.com/louislam/uptime-kuma) as a simple REST-like API. Manage monitors, tags, and status checks from any language or tool using plain HTTP — no Socket.IO client required.
+A lightweight Node.js HTTP bridge that exposes [Uptime Kuma](https://github.com/louislam/uptime-kuma) as a simple REST-like API. Manage monitors, tags, and status checks from any language or tool using plain HTTP instead of talking to Socket.IO directly.
+
+Primary paths:
+
+- `/api` for API requests
+- `/docs` for Swagger UI
+- `/api/openapi.json` for the OpenAPI document
+
+Documentation:
+
+- [docs/REST-API.md](/home/cansoysal/uptime-kuma-api-v2/docs/REST-API.md)
+- [docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md](/home/cansoysal/uptime-kuma-api-v2/docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md)
+- [docs/IMAGE-TAGS.md](/home/cansoysal/uptime-kuma-api-v2/docs/IMAGE-TAGS.md)
+
+## Credits
+
+This project is derived from the original Python bridge by `pr1ncey1987`:
+
+- Original repository: https://github.com/pr1ncey1987/uptime-kuma-api-v2
+
+This fork ports the bridge to Node.js and adds Docker packaging, including a combined Uptime Kuma + bridge container layout intended for homelab and Unraid-style deployments.
+It also documents the current official Uptime Kuma Socket.IO surface from source snapshots instead of relying only on older third-party wrapper docs.
 
 ## Features
 
 - **Full monitor management** — create, edit, delete, pause, resume
 - **Tag support** — add, remove, and replace tags on monitors; create new tags on the fly with custom colours
+- **Notification management** — list, add, edit, delete, and test notifications
+- **Proxy, status page, maintenance, settings, and API key support** — broad coverage of the `uptime-kuma-api` wrapper surface
 - **Bearer token authentication** — protect the bridge with a secret token
 - **2FA / TOTP support** — works with Uptime Kuma accounts that have two-factor authentication enabled
 - **Persistent connection** — single long-lived Socket.IO connection shared across all requests, with automatic reconnection
 - **Clean shutdown** — Ctrl+C disconnects gracefully with no traceback
-- **Zero extra dependencies** for basic use; `pyotp` is auto-installed if 2FA is configured
+- **Small dependency set** — `socket.io-client`, `express`, `dotenv`, and `otplib`
 
 ## Why use this?
 
@@ -24,12 +47,12 @@ Uptime Kuma's API is Socket.IO only — there is no official HTTP REST API. This
 
 ## Requirements
 
-- Python 3.10+
+- Node.js 20+
 - Uptime Kuma v2 (tested; may work with v1)
 - Network access from the bridge host to the Kuma server
 
 ```bash
-pip3 install "python-socketio[client]" websocket-client pyotp --break-system-packages
+npm install
 ```
 
 ---
@@ -37,25 +60,26 @@ pip3 install "python-socketio[client]" websocket-client pyotp --break-system-pac
 ## Installation
 
 ```bash
-mkdir kuma-bridge
-cd kuma-bridge
-git clone git@github.com:pr1ncey1987/uptime-kuma-api-v2.git
-cd uptime-kuma-bridge
+git clone https://github.com/<your-user>/uptime-kuma-api-v2.git
+cd uptime-kuma-api-v2
 cp .env.example .env
 # Edit .env with your settings
-python3 uptime_kuma.py
+npm install
+node src/server.js
 ```
 
 ---
 
 ## Configuration
 
-Create a `.env` file in the same directory as the script:
+Create a `.env` file in the repository root:
 
 ```env
-BRIDGE_HOST=127.0.0.1
+BRIDGE_HOST=0.0.0.0
 BRIDGE_PORT=9911
 BRIDGE_TOKEN=your-secret-token
+BRIDGE_LOG_LEVEL=info
+UPTIME_KUMA_TAG=2
 
 KUMA_URL=http://your-kuma-server:3001
 KUMA_USERNAME=admin
@@ -84,7 +108,8 @@ The value after `secret=` is what goes in `KUMA_2FA_SECRET`. If you already set 
 ## Running
 
 ```bash
-python3 uptime_kuma.py
+npm install
+node src/server.js
 ```
 
 Output on start:
@@ -94,13 +119,156 @@ Output on start:
 [bridge] Kuma URL   : http://your-kuma-server:3001
 [bridge] Timeout    : 60s
 [bridge] Auth token : set
-[bridge] 2FA        : enabled (pyotp)
+[bridge] 2FA        : enabled (otplib)
 [bridge] Kuma connection established.
 ```
 
 Press **Ctrl+C** to shut down cleanly.
 
-To run as a background service, use `systemd`, `supervisor`, or `screen`.
+To run as a background service, use `systemd`, `supervisor`, Docker, or a process manager like `pm2`.
+
+### Docker
+
+Build the image:
+
+```bash
+docker build -t uptime-kuma-api-v2 .
+```
+
+Run it with an env file:
+
+```bash
+docker run --rm -p 9911:9911 \
+  --env-file .env \
+  uptime-kuma-api-v2
+```
+
+Example `docker-compose.yml` snippet:
+
+```yaml
+services:
+  uptime-kuma-api-v2:
+    build: .
+    container_name: uptime-kuma-api-v2
+    restart: unless-stopped
+    ports:
+      - "9911:9911"
+    env_file:
+      - .env
+```
+
+Full standalone example:
+
+```bash
+cp docker-compose.bridge-only.example docker-compose.yml
+cp .env.example .env
+# point KUMA_URL at your existing Kuma instance
+docker compose up -d
+```
+
+Included example file:
+
+- [docker-compose.bridge-only.example](/home/cansoysal/uptime-kuma-api-v2/docker-compose.bridge-only.example)
+
+Notes:
+- The bridge is implemented in Node.js and uses `socket.io-client` + `otplib`.
+- If you leave `BRIDGE_HOST` at `127.0.0.1`, the service will only bind inside the container. For Docker, set `BRIDGE_HOST=0.0.0.0` in `.env`.
+- For the standalone mode, set `KUMA_URL` to your external Kuma base URL, for example `http://10.1.1.6:3001`.
+
+### Combined Uptime Kuma + Bridge Container
+
+For Unraid-style packaging, this repo also includes a combined image definition that runs:
+
+- Uptime Kuma on `3001`
+- the REST bridge on `9911`
+
+Primary health endpoints in the combined image:
+
+- Kuma UI: `http://host:3001/`
+- Bridge API: `http://host:9911/api/health`
+
+Build it with:
+
+```bash
+docker build -f docker/combined.Dockerfile -t kuma-rest-combined .
+```
+
+To pin a specific Kuma base tag at build time:
+
+```bash
+docker build \
+  -f docker/combined.Dockerfile \
+  --build-arg UPTIME_KUMA_TAG=2 \
+  -t kuma-rest-combined .
+```
+
+Suggested env for the combined image:
+
+```env
+BRIDGE_HOST=0.0.0.0
+BRIDGE_PORT=9911
+BRIDGE_TOKEN=your-secret-token
+BRIDGE_LOG_LEVEL=info
+UPTIME_KUMA_TAG=2
+KUMA_URL=http://127.0.0.1:3001
+KUMA_USERNAME=admin
+KUMA_PASSWORD=your-kuma-password
+KUMA_2FA_SECRET=
+KUMA_TIMEOUT=60
+```
+
+Base image tag note:
+
+- `UPTIME_KUMA_TAG=2` is the default and uses the full Uptime Kuma image
+- `UPTIME_KUMA_TAG=2-slim` uses the slimmer image
+
+Current difference:
+
+- `2` includes embedded Chromium and embedded MariaDB support
+- `2-slim` excludes those extras and is smaller
+
+Practical recommendation:
+
+- use `2` as the default for publishing and general users
+- use `2-slim` only when you want a smaller image and do not need browser-engine / Chromium features
+
+More detail:
+
+- [docs/IMAGE-TAGS.md](/home/cansoysal/uptime-kuma-api-v2/docs/IMAGE-TAGS.md)
+
+Suggested run command:
+
+```bash
+docker run -d \
+  --name kuma-rest-combined \
+  -p 3001:3001 \
+  -p 9911:9911 \
+  -v kuma-data:/app/data \
+  --env-file .env \
+  kuma-rest-combined
+```
+
+Compose example:
+
+```bash
+cp docker-compose.yml.example docker-compose.yml
+cp .env.example .env
+docker compose up -d
+```
+
+Included example file:
+
+- [docker-compose.yml.example](/home/cansoysal/uptime-kuma-api-v2/docker-compose.yml.example)
+- [unraid/uptime-kuma-bridge-combined.xml](/home/cansoysal/uptime-kuma-api-v2/unraid/uptime-kuma-bridge-combined.xml)
+- [unraid/uptime-kuma-bridge-only.xml](/home/cansoysal/uptime-kuma-api-v2/unraid/uptime-kuma-bridge-only.xml)
+
+Notes for Unraid:
+- Persist `/app/data`.
+- Use local storage for Kuma data; avoid NFS for SQLite-backed state.
+- Default combined base tag is `2`.
+- Set `UPTIME_KUMA_TAG` to pin a specific Kuma tag over time instead of rebuilding against a moving default blindly.
+- The bridge depends on Kuma's internal Socket.IO API, so bridge compatibility should be versioned alongside Kuma.
+- Replace the placeholder image/repo/support URLs in the XML before submitting to Community Apps.
 
 ---
 
@@ -114,16 +282,49 @@ Authorization: Bearer your-secret-token
 
 Leave `BRIDGE_TOKEN` blank to disable authentication (not recommended for production).
 
+Set `BRIDGE_LOG_LEVEL=debug` if you want verbose bridge logs for Socket.IO connect/login/event flow.
+
 ---
 
 ## API Reference
 
+Primary API base:
+
+```
+/api
+```
+
+Swagger UI:
+
+```
+/docs
+```
+
+OpenAPI JSON:
+
+```
+/api/openapi.json
+```
+
+Bridge health endpoint:
+
+```
+/api/health
+```
+
 All endpoints accept and return `application/json`. All responses include `"ok": true` on success or `"ok": false` with an `"error"` field on failure.
+
+Coverage note:
+- The bridge preserves the original monitor- and tag-focused endpoints explicitly.
+- It also exposes a wider method surface through `POST /call`, mapped to much of the documented `uptime-kuma-api` client surface.
+- The current mapping has been updated against the latest official Uptime Kuma server source snapshot documented in [docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md](/home/cansoysal/uptime-kuma-api-v2/docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md).
+- Some less common compatibility paths still depend on internal Socket.IO behavior and should not be treated as a stable public contract.
+- Legacy root-path aliases are still mounted for compatibility, but `/api` is the preferred public base path.
 
 ### Health Check
 
 ```
-GET /health
+GET /api/health
 ```
 
 Returns bridge status and configuration info.
@@ -135,7 +336,7 @@ Returns bridge status and configuration info.
 #### List all monitors
 
 ```
-POST /monitors/list
+POST /api/monitors/list
 ```
 
 Returns all monitors from Kuma as a dict keyed by monitor ID.
@@ -145,7 +346,7 @@ Returns all monitors from Kuma as a dict keyed by monitor ID.
 #### Find a monitor by URL
 
 ```
-POST /monitors/find
+POST /api/monitors/find
 ```
 
 ```json
@@ -159,7 +360,7 @@ Returns the first monitor whose URL matches (case-insensitive, ignores trailing 
 #### Add a monitor
 
 ```
-POST /monitors/add
+POST /api/monitors/add
 ```
 
 ```json
@@ -189,7 +390,7 @@ All Kuma monitor fields are supported. Unspecified fields use sensible defaults.
 #### Edit a monitor
 
 ```
-POST /monitors/edit
+POST /api/monitors/edit
 ```
 
 ```json
@@ -210,7 +411,7 @@ Fetches the existing monitor and merges your changes, so you only need to send t
 #### Delete a monitor
 
 ```
-POST /monitors/delete
+POST /api/monitors/delete
 ```
 
 ```json
@@ -222,7 +423,7 @@ POST /monitors/delete
 #### Pause a monitor
 
 ```
-POST /monitors/pause
+POST /api/monitors/pause
 ```
 
 ```json
@@ -234,7 +435,7 @@ POST /monitors/pause
 #### Resume a monitor
 
 ```
-POST /monitors/resume
+POST /api/monitors/resume
 ```
 
 ```json
@@ -246,7 +447,7 @@ POST /monitors/resume
 #### Get monitor status / heartbeats
 
 ```
-POST /monitors/status
+POST /api/monitors/status
 ```
 
 ```json
@@ -255,6 +456,65 @@ POST /monitors/status
 
 Returns the heartbeat list for the monitor.
 
+### Additional Resource Endpoints
+
+The bridge also exposes direct endpoints for several common non-monitor resources:
+
+- `POST /api/notifications/list`
+- `POST /api/notifications/add`
+- `POST /api/notifications/edit`
+- `POST /api/notifications/delete`
+- `POST /api/notifications/test`
+- `POST /api/proxies/list`
+- `POST /api/proxies/add`
+- `POST /api/proxies/edit`
+- `POST /api/proxies/delete`
+- `POST /api/status-pages/list`
+- `POST /api/status-pages/add`
+- `POST /api/status-pages/save`
+- `POST /api/status-pages/delete`
+- `POST /api/tags/add`
+- `POST /api/tags/edit`
+- `POST /api/tags/delete`
+- `POST /api/settings/get`
+- `POST /api/settings/set`
+- `POST /api/api-keys/list`
+- `POST /api/api-keys/add`
+- `POST /api/api-keys/enable`
+- `POST /api/api-keys/disable`
+- `POST /api/api-keys/delete`
+- `POST /api/maintenances/list`
+- `POST /api/maintenances/add`
+- `POST /api/maintenances/edit`
+- `POST /api/maintenances/delete`
+
+### Compatibility Method Dispatch
+
+Use `POST /api/call` with:
+
+```json
+{
+  "method": "get_notifications",
+  "args": [],
+  "kwargs": {}
+}
+```
+
+The bridge now maps a large subset of the methods documented by `uptime-kuma-api`, including:
+
+- monitor CRUD and status methods
+- notifications
+- proxies
+- status pages and incidents
+- tags
+- settings
+- Docker hosts
+- maintenances
+- API keys
+- auth and setup helpers
+- database helpers
+- selected diagnostics like `get_game_list` and `test_chrome`
+
 ---
 
 ### Tags
@@ -262,7 +522,7 @@ Returns the heartbeat list for the monitor.
 #### List all tag definitions
 
 ```
-POST /tags/list
+POST /api/tags/list
 ```
 
 Returns all tag definitions from Kuma (id, name, colour).
@@ -272,7 +532,7 @@ Returns all tag definitions from Kuma (id, name, colour).
 #### Add tags to a monitor
 
 ```
-POST /monitors/tags/set
+POST /api/monitors/tags/set
 ```
 
 ```json
@@ -299,7 +559,7 @@ With `"replace": true`, all existing tags on the monitor are removed first, then
 #### Remove tags from a monitor
 
 ```
-POST /monitors/tags/delete
+POST /api/monitors/tags/delete
 ```
 
 ```json
@@ -316,7 +576,7 @@ Removes only the specified tags. Other tags on the monitor are unaffected. Accep
 ### Sniff (debug)
 
 ```
-POST /monitors/sniff
+POST /api/monitors/sniff
 ```
 
 ```json
@@ -331,7 +591,7 @@ Blocks for up to `timeout` seconds waiting for you to add a monitor through the 
 
 ```bash
 TOKEN="your-secret-token"
-BASE="http://127.0.0.1:9911"
+BASE="http://127.0.0.1:9911/api"
 
 # Add a monitor with tags
 curl -s -X POST $BASE/monitors/add \

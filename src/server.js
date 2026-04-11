@@ -1554,7 +1554,18 @@ process.on("SIGTERM", () => {
   void shutdown("SIGTERM");
 });
 
-start().catch((error) => {
-  console.error("[bridge] Fatal startup error:", error);
-  process.exit(1);
-});
+module.exports = {
+  app,
+  pool,
+  METHOD_MAP,
+  openApiSpec,
+  start,
+  shutdown,
+};
+
+if (require.main === module) {
+  start().catch((error) => {
+    console.error("[bridge] Fatal startup error:", error);
+    process.exit(1);
+  });
+}

@@ -122,6 +122,16 @@ npm install
 node src/server.js
 ```
 
+## Testing
+
+Run the HTTP endpoint test suite with:
+
+```bash
+npm test
+```
+
+The test suite uses Node's built-in test runner, starts the Express app without auto-booting the bridge server, and covers the public health/docs routes plus every registered `/api` endpoint with mocked Kuma client responses.
+
 Output on start:
 
 ```

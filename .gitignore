@@ -1,4 +1,5 @@
 .env
+node_modules/
 kuma.db
 kuma.db-shm
 kuma.db-wal

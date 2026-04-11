@@ -8,6 +8,7 @@
   "scripts": {
     "start": "node src/server.js",
     "check": "node --check src/server.js",
+    "test": "node --test test",
     "check:socket-snapshot": "node scripts/check-kuma-socket-snapshot.js"
   },
   "engines": {

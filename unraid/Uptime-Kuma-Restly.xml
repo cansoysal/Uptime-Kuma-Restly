@@ -2,7 +2,7 @@
 <Container version="2">
   <Name>Uptime Kuma Restly</Name>
   <Repository>ghcr.io/cansoysal/uptime-kuma-restly:latest</Repository>
-  <Registry>https://ghcr.io</Registry>
+  <Registry>https://github.com/cansoysal/uptime-kuma-restly/pkgs/container/uptime-kuma-restly</Registry>
   <Network>bridge</Network>
   <MyIP/>
   <Shell>sh</Shell>
@@ -10,16 +10,17 @@
   <Support>https://github.com/cansoysal/Uptime-Kuma-Restly</Support>
   <Project>https://github.com/cansoysal/Uptime-Kuma-Restly</Project>
   <Overview>
-Uptime Kuma Restly for an existing Uptime Kuma instance.
+Uptime Kuma Restly is a lightweight Node.js service that exposes the internal Socket.IO API of an existing Uptime Kuma instance as a standard REST API.
 
-Exposes:
-- REST API bridge on port 9911
-- Swagger UI at /docs on the bridge port
+This template is for the "Bridge" version (the default distribution).
+- **WebUI**: Access Swagger UI at [IP]:9911/docs
+- **Scripts**: Contains tools to verify that the bridge APIs remain in sync with the official Uptime Kuma source. For usage instructions, see the [Development Setup section in the README.md](https://github.com/cansoysal/Uptime-Kuma-Restly#development-setup).
 
-Point KUMA_URL at your existing Uptime Kuma server.
+To use the "Combined" version (a single container that bundles Uptime Kuma (v2.2.1) with the bridge), change the Repository value to:
+ghcr.io/cansoysal/uptime-kuma-restly:latest-combined
+- **WebUI**: Access Uptime Kuma UI at [IP]:3001
+</Overview>
 
-Before publishing this template, replace the placeholder GitHub and container image URLs with your real repository coordinates.
-  </Overview>
   <Category>Tools: Utilities|Network:Management|Status: Monitoring</Category>
   <WebUI>http://[IP]:[PORT:9911]/docs</WebUI>
   <Icon>https://raw.githubusercontent.com/louislam/uptime-kuma/master/public/icon.svg</Icon>
@@ -29,15 +30,19 @@ Before publishing this template, replace the placeholder GitHub and container im
   <DateInstalled/>
   <DonateText/>
   <DonateLink/>
-  <Description>Uptime Kuma Restly adds an HTTP API and Swagger docs for managing an external Uptime Kuma instance.</Description>
+  <Description>A lightweight REST API bridge for Uptime Kuma. Use the 'latest-combined' tag for a full all-in-one installation.</Description>
 
   <Config Name="Bridge API Port" Target="9911" Default="9911" Mode="tcp" Description="Port for the REST bridge API and Swagger docs." Type="Port" Display="always" Required="true" Mask="false">9911</Config>
+  <Config Name="AppData" Target="/app/data" Default="/mnt/user/appdata/uptime-kuma-restly" Mode="rw" Description="Persistent storage for Uptime Kuma data (Used in Combined version)." Type="Path" Display="always" Required="false" Mask="false">/mnt/user/appdata/uptime-kuma-restly</Config>
+  <Config Name="Scripts Path" Target="/app/scripts" Default="/mnt/user/appdata/uptime-kuma-restly/scripts" Mode="rw" Description="Directory for verification scripts." Type="Path" Display="always" Required="false" Mask="false">/mnt/user/appdata/uptime-kuma-restly/scripts</Config>
 
   <Config Name="BRIDGE_HOST" Target="BRIDGE_HOST" Default="0.0.0.0" Mode="" Description="Bridge bind address inside the container." Type="Variable" Display="advanced" Required="true" Mask="false">0.0.0.0</Config>
   <Config Name="BRIDGE_PORT" Target="BRIDGE_PORT" Default="9911" Mode="" Description="Internal port used by the REST bridge." Type="Variable" Display="advanced" Required="true" Mask="false">9911</Config>
   <Config Name="BRIDGE_TOKEN" Target="BRIDGE_TOKEN" Default="" Mode="" Description="Optional Bearer token required by the REST bridge. Leave blank only for trusted local use." Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="BRIDGE_LOG_LEVEL" Target="BRIDGE_LOG_LEVEL" Default="info" Mode="" Description="Log level for the bridge." Type="Variable" Display="advanced" Required="false" Mask="false">info</Config>
+  <Config Name="UPTIME_KUMA_TAG" Target="UPTIME_KUMA_TAG" Default="2" Mode="" Description="Base Uptime Kuma tag for the combined image." Type="Variable" Display="advanced" Required="false" Mask="false">2</Config>
 
-  <Config Name="KUMA_URL" Target="KUMA_URL" Default="http://192.168.1.10:3001" Mode="" Description="Base URL of your existing Uptime Kuma instance." Type="Variable" Display="always" Required="true" Mask="false">http://192.168.1.10:3001</Config>
+  <Config Name="KUMA_URL" Target="KUMA_URL" Default="http://127.0.0.1:3001" Mode="" Description="Base URL of your existing Uptime Kuma instance. (Required for Bridge, defaults to localhost for Combined)." Type="Variable" Display="always" Required="false" Mask="false">http://127.0.0.1:3001</Config>
   <Config Name="KUMA_USERNAME" Target="KUMA_USERNAME" Default="" Mode="" Description="Optional Kuma username for automatic bridge login." Type="Variable" Display="always" Required="false" Mask="false"></Config>
   <Config Name="KUMA_PASSWORD" Target="KUMA_PASSWORD" Default="" Mode="" Description="Optional Kuma password for automatic bridge login." Type="Variable" Display="always" Required="false" Mask="true"></Config>
   <Config Name="KUMA_2FA_SECRET" Target="KUMA_2FA_SECRET" Default="" Mode="" Description="Optional base32 TOTP secret if the Kuma account uses 2FA." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>

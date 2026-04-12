@@ -1,0 +1,33 @@
+services:
+    uptime-kuma-restly:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: uptime-kuma-restly:latest
+        container_name: uptime-kuma-restly
+        restart: unless-stopped
+        volumes:
+            - ./scripts:/app/scripts
+        ports:
+            - "9911:9911"
+        environment:
+            - BRIDGE_HOST=${BRIDGE_HOST:-0.0.0.0}
+            - BRIDGE_PORT=${BRIDGE_PORT:-9911}
+            - BRIDGE_TOKEN=${BRIDGE_TOKEN:-BridgeSecretToken}
+            - BRIDGE_LOG_LEVEL=${BRIDGE_LOG_LEVEL:-info}
+            - UPTIME_KUMA_TAG=${UPTIME_KUMA_TAG:-2}
+            - KUMA_URL=${KUMA_URL:-https://my.kuma.url}
+            - KUMA_USERNAME=${KUMA_USERNAME:-mykumausername}
+            - KUMA_PASSWORD=${KUMA_PASSWORD:-mykumapassword}
+            - KUMA_2FA_SECRET=${KUMA_2FA_SECRET:-2fa-secret-key}
+            - KUMA_TIMEOUT=${KUMA_TIMEOUT:-60}
+        # env_file:
+        #   - .env
+        healthcheck:
+            test:
+                - CMD-SHELL
+                - curl -fsS http://127.0.0.1:9911/api/health >/dev/null
+            interval: 30s
+            timeout: 10s
+            retries: 10
+            start_period: 30s

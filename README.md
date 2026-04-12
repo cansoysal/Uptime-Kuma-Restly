@@ -15,9 +15,13 @@ Documentation:
 - [docs/WRITE-PAYLOADS.md](docs/WRITE-PAYLOADS.md) - write-body cheat sheet
 - [docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md](docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md)
 
+## 💡 Motivation
+
+As I increasingly rely on AI-deployed services and "vibe-coded" applications, the overhead of manual monitoring updates becomes a bottleneck. This tool provides a way to bridge that gap, allowing AI agents to autonomously manage and update Uptime Kuma monitor configurations through a standardized REST interface.
+
 ## 📦 Distributions
 
-This project provides two distinct distributions: the **Bridge** (the core product) and the **Combined** package (a specialized, all-in-one distribution).
+This project provides two distinct distributions: the **Standard Version** (the core product) and the **Combined Package** (a specialized, all-in-one distribution).
 
 ### 🔹 1. The Standard Version (Default)
 *A lightweight sidecar/API layer designed to connect to an existing Uptime Kuma instance.*
@@ -99,8 +103,6 @@ npm install
 node src/server.js
 ```
 
-
-
 ---
 
 ## ⚙️ Configuration
@@ -114,7 +116,12 @@ BRIDGE_TOKEN=your-secret-token
 BRIDGE_LOG_LEVEL=info
 
 # For Bridge-Only mode, point to your existing Kuma instance
+KUMA_URL=https://my.kuma.url
+KUMA_USERNAME=mykumausername
+KUMA_PASSWORD=mykumapassword
 
+# Only required if your Kuma account has 2FA enabled
+KUMA_2FA_SECRET=your-2fa-secret
 ```
 
 ## 📋 API Reference

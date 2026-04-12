@@ -111,6 +111,35 @@ test("GET /api/openapi.json works without auth", async () => {
   assert.equal(result.body.openapi, "3.0.3");
 });
 
+test("GET /api/openapi.json exposes resource payload schemas with required fields", async () => {
+  const result = await request("/api/openapi.json", { method: "GET", auth: false });
+  assert.equal(result.response.status, 200);
+
+  const notificationSchema = result.body.components.schemas.NotificationPayload;
+  assert.deepEqual(notificationSchema.required, ["type", "name"]);
+
+  const proxySchema = result.body.components.schemas.ProxyPayload;
+  assert.deepEqual(proxySchema.required, ["protocol", "host", "port"]);
+
+  const statusPageCreateSchema = result.body.components.schemas.StatusPageCreatePayload;
+  assert.deepEqual(statusPageCreateSchema.required, ["title", "slug"]);
+
+  const apiKeySchema = result.body.components.schemas.ApiKeyPayload;
+  assert.deepEqual(apiKeySchema.required, ["name"]);
+
+  const maintenanceSchema = result.body.components.schemas.MaintenancePayload;
+  assert.deepEqual(maintenanceSchema.required, ["title"]);
+
+  assert.equal(
+    result.body.paths["/notifications"].post.requestBody.content["application/json"].schema.$ref,
+    "#/components/schemas/NotificationPayload",
+  );
+  assert.equal(
+    result.body.paths["/settings"].patch.requestBody.content["application/json"].schema.$ref,
+    "#/components/schemas/SettingsPayload",
+  );
+});
+
 test("GET /docs works without auth", async () => {
   const result = await request("/docs", { method: "GET", auth: false });
   assert.equal(result.response.status, 200);

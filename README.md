@@ -10,9 +10,9 @@ Primary paths:
 
 Documentation:
 
-- [docs/REST-API.md](docs/REST-API.md)
+- [docs/REST-API.md](docs/REST-API.md) - canonical REST reference
 - [docs/MONITOR-TYPES.md](docs/MONITOR-TYPES.md)
-- [docs/WRITE-PAYLOADS.md](docs/WRITE-PAYLOADS.md)
+- [docs/WRITE-PAYLOADS.md](docs/WRITE-PAYLOADS.md) - write-body cheat sheet
 - [docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md](docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md)
 - [docs/IMAGE-TAGS.md](docs/IMAGE-TAGS.md)
 
@@ -238,30 +238,32 @@ Included example file:
 Notes:
 - The bridge is implemented in Node.js and uses `socket.io-client` + `otplib`.
 - If you leave `BRIDGE_HOST` at `127.0.0.1`, the service will only bind inside the container. For Docker, set `BRIDGE_HOST=0.0.0.0` in `.env`.
-- For the standalone mode, set `KUMA_URL` to your external Kuma base URL, for example `http://10.1.1.6:3001`.
+- For the standalone mode, set `KUMA_URL` to your external Kuma base URL, for example `http://192.0.2.10:3001`.
 
-### Publish To GHCR
+### Prebuilt Images
 
-This repo includes a GitHub Actions workflow that publishes both images to GHCR:
+Prebuilt container images are available on GHCR:
 
 - `ghcr.io/cansoysal/uptime-kuma-restly`
 - `ghcr.io/cansoysal/uptime-kuma-restly-combined`
 
-Workflow file:
+Pull the bridge-only image:
 
-- [publish-ghcr.yml](.github/workflows/publish-ghcr.yml)
+```bash
+docker pull ghcr.io/cansoysal/uptime-kuma-restly:latest
+```
 
-What it does:
+Pull the combined image:
 
-- publishes on pushes to `main`
-- publishes on tags matching `v*`
-- supports manual runs through `workflow_dispatch`
-- publishes `latest` on the default branch
-- publishes branch, tag, and SHA tags
+```bash
+docker pull ghcr.io/cansoysal/uptime-kuma-restly-combined:latest
+```
+
+If you prefer a pinned image, use a version tag instead of `latest` when available.
 
 Important note:
 
-- after the first publish, set the GHCR package visibility to `public` if you want Unraid and other users to pull the images without authentication
+- if a GHCR package is private, users will need registry authentication before they can pull it
 
 ### Combined Uptime Kuma + Bridge Container
 

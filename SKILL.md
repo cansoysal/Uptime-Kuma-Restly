@@ -29,11 +29,23 @@ The base path for all API calls is `/api`.
 Agents should treat the repository monitor type map as required reading before creating or editing monitors:
 
 - [docs/MONITOR-TYPES.md](docs/MONITOR-TYPES.md)
+- [docs/REST-API.md](docs/REST-API.md)
 - [docs/WRITE-PAYLOADS.md](docs/WRITE-PAYLOADS.md)
 
 If the skill instructions and that document ever diverge, prefer `docs/MONITOR-TYPES.md` and update the skill text to match before continuing.
 
-For non-monitor write endpoints such as notifications, proxies, tags, status pages, settings, API keys, and maintenances, use [docs/WRITE-PAYLOADS.md](docs/WRITE-PAYLOADS.md) for the bridge envelope fields and example request bodies.
+For non-monitor write endpoints such as notifications, proxies, tags, status pages, settings, API keys, and maintenances, prefer [docs/REST-API.md](docs/REST-API.md) and `/api/openapi.json`. The live OpenAPI document is the quickest way to discover endpoint paths, request schemas, and which fields are marked required vs optional.
+
+### 🔎 Endpoint Discovery Order
+
+When an agent needs to discover or verify endpoints:
+
+1. Check `/api/openapi.json` first for the current route and schema surface.
+2. Use `/docs` for a human-readable Swagger view.
+3. Use [docs/REST-API.md](docs/REST-API.md) for bridge-specific notes and examples.
+4. Use [docs/MONITOR-TYPES.md](docs/MONITOR-TYPES.md) for monitor-type validation rules.
+
+Do not assume wrapper keys like `notification`, `proxy`, `status_page`, `settings`, `api_key`, or `maintenance`. The REST routes accept raw JSON objects for those resources unless the OpenAPI document says otherwise.
 
 ---
 
@@ -119,8 +131,8 @@ For `kafka-producer` with `kafkaProducerSaslOptions.mechanism: "aws"`:
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/tags` | `GET` | Returns all tag definitions (id, name, colour). |
-| `/tags` | `POST` | Creates a tag from the request body. |
-| `/tags/:id` | `PATCH` | Updates a tag from the request body. |
+| `/tags` | `POST` | Creates a tag from a raw tag object such as `{"name":"#production","color":"#22c55e"}`. |
+| `/tags/:id` | `PATCH` | Updates a tag from a raw tag object. |
 | `/tags/:id` | `DELETE` | Deletes a tag by ID. |
 | `/monitors/:id/tags`| `PUT` | **Payload:** `{"tags": ["#tag1", 3], "replace": true}` |
 | `/monitors/:id/tags`| `DELETE` | **Payload:** `{"tags": ["#tag1"]}` |
@@ -129,28 +141,28 @@ For `kafka-producer` with `kafkaProducerSaslOptions.mechanism: "aws"`:
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/notifications`| `GET` | List all notification channels. |
-| `/notifications`| `POST` | Create a notification from the request body. |
-| `/notifications/:id`| `PATCH` | Update a notification from the request body. |
+| `/notifications`| `POST` | Create a notification from a raw notification object. Common create fields: `type`, `name`. |
+| `/notifications/:id`| `PATCH` | Update a notification from a raw notification object. |
 | `/notifications/:id`| `DELETE` | Delete a notification by ID. |
-| `/notifications/:id/test`| `POST` | Test a notification using the request body. |
+| `/notifications/:id/test`| `POST` | Test a notification using a raw notification object. |
 | `/proxies`| `GET` | List proxies. |
-| `/proxies`| `POST` | Create a proxy from the request body. |
-| `/proxies/:id`| `PATCH` | Update a proxy from the request body. |
+| `/proxies`| `POST` | Create a proxy from a raw proxy object. Common create fields: `protocol`, `host`, `port`. |
+| `/proxies/:id`| `PATCH` | Update a proxy from a raw proxy object. |
 | `/proxies/:id`| `DELETE` | Delete a proxy by ID. |
 | `/status-pages`| `GET` | List all status pages. |
-| `/status-pages`| `POST` | Create a status page from the request body. |
-| `/status-pages/:slug`| `PUT` | Save a status page using the request body. |
+| `/status-pages`| `POST` | Create a status page from a raw object. Required create fields: `title`, `slug`. |
+| `/status-pages/:slug`| `PUT` | Save a status page using a raw object. Common fields: `slug`, `config`, `imgDataUrl`, `publicGroupList`. |
 | `/status-pages/:slug`| `DELETE` | Delete a status page by slug. |
 | `/settings` | `GET` | Get current Kuma settings. |
-| `/settings` | `PATCH` | Update Kuma settings from the request body. |
+| `/settings` | `PATCH` | Update Kuma settings from a raw settings object. |
 | `/api-keys` | `GET` | List API keys. |
-| `/api-keys` | `POST` | Create an API key from the request body. |
+| `/api-keys` | `POST` | Create an API key from a raw object. Common create field: `name`. |
 | `/api-keys/:id/enable` | `POST` | Enable an API key. |
 | `/api-keys/:id/disable` | `POST` | Disable an API key. |
 | `/api-keys/:id` | `DELETE` | Delete an API key. |
 | `/maintenances` | `GET` | List maintenances. |
-| `/maintenances` | `POST` | Create a maintenance from the request body. |
-| `/maintenances/:id` | `PATCH` | Update a maintenance from the request body. |
+| `/maintenances` | `POST` | Create a maintenance from a raw object. Common create field: `title`. |
+| `/maintenances/:id` | `PATCH` | Update a maintenance from a raw object. |
 | `/maintenances/:id` | `DELETE` | Delete a maintenance by ID. |
 
 ---

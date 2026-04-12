@@ -540,6 +540,162 @@ const MONITOR_TYPE_SCHEMA_REFS = Object.keys(MONITOR_TYPE_SCHEMAS).map((schemaNa
   $ref: `#/components/schemas/${schemaName}`,
 }));
 
+const NOTIFICATION_PAYLOAD_SCHEMA = {
+  type: "object",
+  additionalProperties: true,
+  description: "Notification channel configuration passed through to Uptime Kuma. Provider-specific fields depend on the selected notification type.",
+  properties: {
+    id: { type: "integer" },
+    type: { type: "string", description: "Notification provider type, for example 'apprise'." },
+    name: { type: "string" },
+    isDefault: { type: "boolean" },
+    applyExisting: { type: "boolean" },
+    appriseURL: { type: "string" },
+  },
+  required: ["type", "name"],
+  example: {
+    type: "apprise",
+    name: "Ops Apprise",
+    appriseURL: "https://apprise.example/notify/token",
+  },
+};
+
+const PROXY_PAYLOAD_SCHEMA = {
+  type: "object",
+  additionalProperties: true,
+  description: "Outbound proxy configuration passed through to Uptime Kuma.",
+  properties: {
+    id: { type: "integer" },
+    protocol: { type: "string", example: "http" },
+    host: { type: "string" },
+    port: { type: "integer" },
+    username: { type: "string" },
+    password: { type: "string" },
+  },
+  required: ["protocol", "host", "port"],
+  example: {
+    protocol: "http",
+    host: "proxy.internal",
+    port: 8080,
+    username: "bridge-user",
+    password: "secret",
+  },
+};
+
+const STATUS_PAGE_CREATE_PAYLOAD_SCHEMA = {
+  type: "object",
+  additionalProperties: true,
+  description: "Minimal status page creation payload. The bridge forwards title and slug to Uptime Kuma's addStatusPage call.",
+  properties: {
+    title: { type: "string" },
+    slug: { type: "string" },
+  },
+  required: ["title", "slug"],
+  example: {
+    title: "Public Status",
+    slug: "public-status",
+  },
+};
+
+const STATUS_PAGE_SAVE_PAYLOAD_SCHEMA = {
+  type: "object",
+  additionalProperties: true,
+  description: "Status page save payload. The bridge forwards slug, config, imgDataUrl, and publicGroupList to Uptime Kuma.",
+  properties: {
+    slug: { type: "string" },
+    config: {
+      type: "object",
+      additionalProperties: true,
+      properties: {
+        title: { type: "string" },
+        description: { type: "string" },
+      },
+    },
+    publicGroupList: {
+      type: "array",
+      items: { type: "object", additionalProperties: true },
+    },
+    imgDataUrl: { type: "string", nullable: true },
+  },
+  example: {
+    slug: "public-status",
+    config: {
+      title: "Public Status",
+      description: "Current service health",
+    },
+    publicGroupList: [],
+    imgDataUrl: null,
+  },
+};
+
+const TAG_PAYLOAD_SCHEMA = {
+  type: "object",
+  additionalProperties: true,
+  description: "Tag definition passed through to Uptime Kuma.",
+  properties: {
+    id: { type: "integer" },
+    name: { type: "string" },
+    color: { type: "string" },
+  },
+  required: ["name"],
+  example: {
+    name: "#production",
+    color: "#22c55e",
+  },
+};
+
+const SETTINGS_PAYLOAD_SCHEMA = {
+  type: "object",
+  additionalProperties: true,
+  description: "Uptime Kuma settings object. The bridge forwards all provided keys to setSettings.",
+  properties: {
+    theme: { type: "string" },
+    title: { type: "string" },
+    primaryBaseURL: { type: "string" },
+  },
+  example: {
+    theme: "dark",
+    title: "Uptime Kuma",
+  },
+};
+
+const API_KEY_PAYLOAD_SCHEMA = {
+  type: "object",
+  additionalProperties: true,
+  description: "API key definition passed through to Uptime Kuma.",
+  properties: {
+    id: { type: "integer" },
+    name: { type: "string" },
+    expiryDate: { type: "string", nullable: true, format: "date-time" },
+    active: { type: "boolean" },
+  },
+  required: ["name"],
+  example: {
+    name: "Bridge Key",
+    expiryDate: null,
+    active: true,
+  },
+};
+
+const MAINTENANCE_PAYLOAD_SCHEMA = {
+  type: "object",
+  additionalProperties: true,
+  description: "Maintenance definition passed through to Uptime Kuma. Scheduling fields vary by maintenance strategy and are not exhaustively validated by the bridge.",
+  properties: {
+    id: { type: "integer" },
+    title: { type: "string" },
+    description: { type: "string" },
+    active: { type: "boolean" },
+    strategy: { type: "string" },
+  },
+  required: ["title"],
+  example: {
+    title: "Weekly maintenance",
+    description: "Routine updates",
+    active: true,
+  },
+};
+
 function normalizeMonitor(monitor) {
   const next = { ...monitor };
 
@@ -1832,6 +1988,14 @@ const openApiSpec = {
         properties: MONITOR_SHARED_PROPERTIES,
         description: "Partial monitor update. The bridge merges this patch with the existing monitor and then validates the final payload against the selected monitor type.",
       },
+      NotificationPayload: NOTIFICATION_PAYLOAD_SCHEMA,
+      ProxyPayload: PROXY_PAYLOAD_SCHEMA,
+      StatusPageCreatePayload: STATUS_PAGE_CREATE_PAYLOAD_SCHEMA,
+      StatusPageSavePayload: STATUS_PAGE_SAVE_PAYLOAD_SCHEMA,
+      TagPayload: TAG_PAYLOAD_SCHEMA,
+      SettingsPayload: SETTINGS_PAYLOAD_SCHEMA,
+      ApiKeyPayload: API_KEY_PAYLOAD_SCHEMA,
+      MaintenancePayload: MAINTENANCE_PAYLOAD_SCHEMA,
       ...MONITOR_TYPE_SCHEMAS,
     },
   },
@@ -2021,7 +2185,7 @@ const openApiSpec = {
           required: true,
           content: {
             "application/json": {
-              schema: { type: "object", additionalProperties: true },
+              schema: { $ref: "#/components/schemas/NotificationPayload" },
             },
           },
         },
@@ -2034,7 +2198,7 @@ const openApiSpec = {
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
         requestBody: {
           required: true,
-          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+          content: { "application/json": { schema: { $ref: "#/components/schemas/NotificationPayload" } } },
         },
         responses: { 200: { description: "Update notification result" } },
       },
@@ -2050,7 +2214,7 @@ const openApiSpec = {
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
         requestBody: {
           required: true,
-          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+          content: { "application/json": { schema: { $ref: "#/components/schemas/NotificationPayload" } } },
         },
         responses: { 200: { description: "Test notification result" } },
       },
@@ -2061,7 +2225,7 @@ const openApiSpec = {
         summary: "Create proxy",
         requestBody: {
           required: true,
-          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+          content: { "application/json": { schema: { $ref: "#/components/schemas/ProxyPayload" } } },
         },
         responses: { 200: { description: "Create proxy result" } },
       },
@@ -2072,7 +2236,7 @@ const openApiSpec = {
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
         requestBody: {
           required: true,
-          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+          content: { "application/json": { schema: { $ref: "#/components/schemas/ProxyPayload" } } },
         },
         responses: { 200: { description: "Update proxy result" } },
       },
@@ -2088,7 +2252,7 @@ const openApiSpec = {
         summary: "Create status page",
         requestBody: {
           required: true,
-          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+          content: { "application/json": { schema: { $ref: "#/components/schemas/StatusPageCreatePayload" } } },
         },
         responses: { 200: { description: "Create status page result" } },
       },
@@ -2099,7 +2263,7 @@ const openApiSpec = {
         parameters: [{ name: "slug", in: "path", required: true, schema: { type: "string" } }],
         requestBody: {
           required: true,
-          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+          content: { "application/json": { schema: { $ref: "#/components/schemas/StatusPageSavePayload" } } },
         },
         responses: { 200: { description: "Save status page result" } },
       },
@@ -2115,7 +2279,7 @@ const openApiSpec = {
         summary: "Create tag",
         requestBody: {
           required: true,
-          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+          content: { "application/json": { schema: { $ref: "#/components/schemas/TagPayload" } } },
         },
         responses: { 200: { description: "Create tag result" } },
       },
@@ -2126,7 +2290,7 @@ const openApiSpec = {
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
         requestBody: {
           required: true,
-          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+          content: { "application/json": { schema: { $ref: "#/components/schemas/TagPayload" } } },
         },
         responses: { 200: { description: "Update tag result" } },
       },
@@ -2142,7 +2306,7 @@ const openApiSpec = {
         summary: "Update settings",
         requestBody: {
           required: true,
-          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+          content: { "application/json": { schema: { $ref: "#/components/schemas/SettingsPayload" } } },
         },
         responses: { 200: { description: "Update settings result" } },
       },
@@ -2153,7 +2317,7 @@ const openApiSpec = {
         summary: "Create API key",
         requestBody: {
           required: true,
-          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+          content: { "application/json": { schema: { $ref: "#/components/schemas/ApiKeyPayload" } } },
         },
         responses: { 200: { description: "Create API key result" } },
       },
@@ -2185,7 +2349,7 @@ const openApiSpec = {
         summary: "Create maintenance",
         requestBody: {
           required: true,
-          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+          content: { "application/json": { schema: { $ref: "#/components/schemas/MaintenancePayload" } } },
         },
         responses: { 200: { description: "Create maintenance result" } },
       },
@@ -2196,7 +2360,7 @@ const openApiSpec = {
         parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
         requestBody: {
           required: true,
-          content: { "application/json": { schema: { type: "object", additionalProperties: true } } },
+          content: { "application/json": { schema: { $ref: "#/components/schemas/MaintenancePayload" } } },
         },
         responses: { 200: { description: "Update maintenance result" } },
       },

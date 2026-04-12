@@ -39,6 +39,7 @@ When changing this repo:
    - [README.md](README.md)
    - [docs/REST-API.md](docs/REST-API.md)
    - [docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md](docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md) if the official socket surface changed
+6. Verify Documentation Sync: Ensure that any changes to the schema or requirements are reflected in [docs/REST-API.md](docs/REST-API.md), [docs/MONITOR-TYPES.md](docs/MONITOR-TYPES.md), and [SKILL.md](SKILL.md).
 
 ## Testing Rules
 

@@ -19,8 +19,9 @@ Documentation:
 Verification helper:
 
 - `npm run check:socket-snapshot`
-  - Compares the documented socket snapshot to a local Uptime Kuma source checkout
-  - Default source path: `/tmp/uptime-kuma-official`
+  - Compares the documented socket snapshot to a local Uptime Kuma source checkout.
+  - First, clone the official source: `git clone https://github.com/louislam/uptime-kuma.git ./uptime-kuma`
+  - Default source path: `./uptime-kuma` (already in `.gitignore`)
   - You can also pass a custom path:
     - `npm run check:socket-snapshot -- /path/to/uptime-kuma`
     - `node scripts/check-kuma-socket-snapshot.js /path/to/uptime-kuma`
@@ -93,9 +94,10 @@ Examples:
 }
 ```
 
-The full per-type required field list is documented in:
+The full per-type required field list and detailed payload structures are documented in:
 
-- [SKILL.md](SKILL.md)
+- [docs/MONITOR-TYPES.md](docs/MONITOR-TYPES.md)
+- [docs/WRITE-PAYLOADS.md](docs/WRITE-PAYLOADS.md)
 - [docs/REST-API.md](docs/REST-API.md)
 
 ---

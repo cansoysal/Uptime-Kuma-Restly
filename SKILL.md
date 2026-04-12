@@ -24,17 +24,14 @@ All requests **MUST** include the `Authorization` header with the token provided
 The base path for all API calls is `/api`. 
 *Example: `http://<host>:<port>/api/monitors`*
 
-### 📘 Canonical Monitor Type Reference
+### 📘 Canonical Data & Discovery (Mandatory)
 
-Agents should treat the repository monitor type map as required reading before creating or editing monitors:
+**Do not rely on static tables within this file for payload structures.** To prevent errors caused by stale information, agents **MUST** use the following discovery order when performing write operations (POST/PATCH/PUT):
 
-- [docs/MONITOR-TYPES.md](docs/MONITOR-TYPES.md)
-- [docs/REST-API.md](docs/REST-API.md)
-- [docs/WRITE-PAYLOADS.md](docs/WRITE-PAYLOADS.md)
-
-If the skill instructions and that document ever diverge, prefer `docs/MONITOR-TYPES.md` and update the skill text to match before continuing.
-
-For non-monitor write endpoints such as notifications, proxies, tags, status pages, settings, API keys, and maintenances, prefer [docs/REST-API.md](docs/REST-API.md) and `/api/openapi.json`. The live OpenAPI document is the quickest way to discover endpoint paths, request schemas, and which fields are marked required vs optional.
+1. **Check `/api/openapi.json` First:** This is the most authoritative source for current route paths, required fields, and data types.
+2. **Consult [docs/MONITOR-TYPES.md](docs/MONITOR-TYPES.md):** Use this for the specific validation rules and required fields for different monitor types (e.g., `http`, `dns`, `mqtt`).
+3. **Consult [docs/WRITE-PAYLOADS.md](docs/WRITE-PAYLOADS.md):** Use this for specialized payload structures and edge cases.
+4. **Use the `/monitors/sniff` Endpoint:** If you are unsure of a valid payload for a specific monitor type, use this endpoint to intercept a real request from the Kuma UI to see the exact structure expected by the bridge.
 
 ### 🔎 Endpoint Discovery Order
 
@@ -61,71 +58,13 @@ Do not assume wrapper keys like `notification`, `proxy`, `status_page`, `setting
 | Endpoint | Method | Payload/Description |
 |----------|--------|---------------------|
 | `/monitors` | `GET` | Returns all monitors as a dictionary keyed by ID. |
-| `/monitors` | `POST` | **Payload:** monitor object where `type` controls required fields. |
-| `/monitors/:id` | `PATCH` | **Payload:** partial monitor patch merged into the existing monitor before validation. |
+| `/monitors` | `POST` | **Payload:** Monitor object. Refer to `/api/openapi.json` and `docs/MONITOR-TYPES.md` for required fields based on `type`. |
+| `/monitors/:id` | `PATCH` | **Payload:** Partial monitor patch. The final merged monitor must satisfy all type-specific validation rules. |
 | `/monitors/:id`| `DELETE` | Deletes a monitor by ID. |
 | `/monitors/:id/pause` | `POST` | Pauses a monitor. |
 | `/monitors/:id/resume`| `POST` | Resumes a monitor. |
 | `/monitors/:id/status`| `GET` | Returns heartbeat list for a monitor. |
 | `/monitors/by-url?url=...` | `GET` | Finds a monitor by URL. |
-
-### 🧩 Monitor Type Required Fields
-Use these minimum fields in the request body for `POST /monitors`. For `PATCH /monitors/:id`, the final merged monitor must satisfy the same rules.
-Use these minimum fields inside the request body for `POST /monitors`. For `PATCH /monitors/:id`, the final merged monitor must satisfy the same rules.
-
-This section mirrors [docs/MONITOR-TYPES.md](docs/MONITOR-TYPES.md) so the skill remains usable even when the agent only has the skill file open.
-
-| Monitor Type | Required Fields |
-|-------------|-----------------|
-| `http` | `url` |
-| `keyword` | `url`, `keyword` |
-| `json-query` | `url`, `jsonPath`, `jsonPathOperator`, `expectedValue` |
-| `port` | `hostname`, `port` |
-| `ping` | `hostname` |
-| `dns` | `hostname`, `dns_resolve_server`, `port` |
-| `docker` | `docker_container`, `docker_host` |
-| `system-service` | `system_service_name` |
-| `real-browser` | `url` |
-| `group` | no extra type-specific fields |
-| `push` | no extra type-specific fields; the bridge auto-generates `pushToken` if omitted |
-| `manual` | no extra type-specific fields |
-| `globalping` + `subtype: "ping"` | `subtype`, `hostname`, `protocol` |
-| `globalping` + `subtype: "http"` | `subtype`, `url`, `protocol` |
-| `globalping` + `subtype: "dns"` | `subtype`, `hostname`, `port`, `protocol` |
-| `grpc-keyword` | `grpcUrl`, `keyword`, `grpcServiceName`, `grpcMethod` |
-| `kafka-producer` | `kafkaProducerBrokers`, `kafkaProducerTopic`, `kafkaProducerMessage` |
-| `mqtt` | `hostname`, `mqttTopic` |
-| `mqtt` with `mqttCheckType: "json-query"` | `hostname`, `mqttTopic`, `jsonPath`, `expectedValue` |
-| `rabbitmq` | `rabbitmqNodes`, `rabbitmqUsername`, `rabbitmqPassword` |
-| `sip-options` | `hostname`, `port` |
-| `smtp` | `hostname`, `port` |
-| `snmp` | `hostname`, `port`, `radiusPassword`, `snmpOid`, `jsonPath`, `jsonPathOperator`, `expectedValue` |
-| `snmp` with `snmpVersion: "3"` | all SNMP fields above plus `snmpV3Username` |
-| `tailscale-ping` | `hostname` |
-| `websocket-upgrade` | `url` |
-| `sqlserver` | `databaseConnectionString` |
-| `mongodb` | `databaseConnectionString` |
-| `mysql` | `databaseConnectionString` |
-| `oracledb` | `databaseConnectionString`, `basic_auth_user`, `basic_auth_pass` |
-| `postgres` | `databaseConnectionString` |
-| `radius` | `hostname`, `port`, `radiusUsername`, `radiusPassword`, `radiusSecret`, `radiusCalledStationId`, `radiusCallingStationId` |
-| `redis` | `databaseConnectionString` |
-| `gamedig` | `hostname`, `port`, `game` |
-| `steam` | `hostname`, `port` |
-
-### 🔐 Conditional Auth Fields
-For `http`, `keyword`, `json-query`, and `globalping` HTTP monitors:
-
-| Condition | Required Fields |
-|----------|-----------------|
-| `authMethod: "mtls"` | `tlsCert`, `tlsKey` |
-| `authMethod: "oauth2-cc"` | `oauth_token_url`, `oauth_client_id`, `oauth_client_secret` |
-
-For `kafka-producer` with `kafkaProducerSaslOptions.mechanism: "aws"`:
-
-| Condition | Required Fields |
-|----------|-----------------|
-| AWS SASL | `kafkaProducerSaslOptions.authorizationIdentity`, `kafkaProducerSaslOptions.accessKeyId`, `kafkaProducerSaslOptions.secretAccessKey` |
 
 ### 🏷️ Tagging
 | Endpoint | Method | Description |
@@ -134,36 +73,35 @@ For `kafka-producer` with `kafkaProducerSaslOptions.mechanism: "aws"`:
 | `/tags` | `POST` | Creates a tag from a raw tag object such as `{"name":"#production","color":"#22c55e"}`. |
 | `/tags/:id` | `PATCH` | Updates a tag from a raw tag object. |
 | `/tags/:id` | `DELETE` | Deletes a tag by ID. |
-| `/monitors/:id/tags`| `PUT` | **Payload:** `{"tags": ["#tag1", 3], "replace": true}` |
-| `/monitors/:id/tags`| `DELETE` | **Payload:** `{"tags": ["#tag1"]}` |
+| `/monitors/:id/tags`| `PUT` | **Payload:** `{"tags": ["#tag1", 3], "replace": true}`. |
+| `/monitors/:id/tags`| `DELETE` | **Payload:** `{"tags": ["#tag1"]}`. |
 
 ### 🔔 Notifications & System
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/notifications`| `GET` | List all notification channels. |
-| `/notifications`| `POST` | Create a notification from a raw notification object. Common create fields: `type`, `name`. |
+| `/notifications`| `POST` | Create a notification from a raw notification object. |
 | `/notifications/:id`| `PATCH` | Update a notification from a raw notification object. |
 | `/notifications/:id`| `DELETE` | Delete a notification by ID. |
 | `/notifications/:id/test`| `POST` | Test a notification using a raw notification object. |
 | `/proxies`| `GET` | List proxies. |
-| `/proxies`| `POST` | Create a proxy from a raw proxy object. Common create fields: `protocol`, `host`, `port`. |
+| `/proxies`| `POST` | Create a proxy from a raw proxy object. |
 | `/proxies/:id`| `PATCH` | Update a proxy from a raw proxy object. |
 | `/proxies/:id`| `DELETE` | Delete a proxy by ID. |
 | `/status-pages`| `GET` | List all status pages. |
-| `/status-pages`| `POST` | Create a status page from a raw object. Required create fields: `title`, `slug`. |
-| `/status-pages/:slug`| `PUT` | Save a status page using a raw object. Common fields: `slug`, `config`, `imgDataUrl`, `publicGroupList`. |
+| `/status-pages`| `POST` | Create a status page from a raw object. |
+| `/status-pages/:slug`| `PUT` | Save a status page using a raw object. |
 | `/status-pages/:slug`| `DELETE` | Delete a status page by slug. |
 | `/settings` | `GET` | Get current Kuma settings. |
 | `/settings` | `PATCH` | Update Kuma settings from a raw settings object. |
 | `/api-keys` | `GET` | List API keys. |
-| `/api-keys` | `POST` | Create an API key from a raw object. Common create field: `name`. |
+| `/api-keys` | `POST` | Create an API key from a raw object. |
 | `/api-keys/:id/enable` | `POST` | Enable an API key. |
 | `/api-keys/:id/disable` | `POST` | Disable an API key. |
 | `/api-keys/:id` | `DELETE` | Delete an API key. |
 | `/maintenances` | `GET` | List maintenances. |
-| `/maintenances` | `POST` | Create a maintenance from a raw object. Common create field: `title`. |
+| `/maintenances` | `POST` | Create a maintenance from a raw object. |
 | `/maintenances/:id` | `PATCH` | Update a maintenance from a raw object. |
-| `/maintenances/:id` | `DELETE` | Delete a maintenance by ID. |
 
 ---
 
@@ -182,18 +120,11 @@ For any method not explicitly listed above, use the generic `/call` endpoint. Th
 }
 ```
 
-**Example (Get API Keys):**
-```bash
-curl -X POST "http://localhost:9911/api/call" \
-     -H "Authorization: Bearer your-token" \
-     -d '{"method": "get_api_keys", "args": [], "kwargs": {}}'
-```
-
 ---
 
 ## 💡 Implementation Tips for Agents
 
-1.  **Tagging Logic:** When updating tags via `PUT /monitors/:id/tags`, you can use a string (e.g., `"#production"`) to find/create a tag by name, or an integer to use an existing ID.
-2.  **Monitor Merging:** `PATCH /monitors/:id` is additive. You only need to send the fields you wish to change.
-3.  **Error Handling:** All responses follow the pattern `{"ok": true, ...}` or `{"ok": false, "error": "..."}`. Always check the `ok` field before proceeding with logic.
-4.  **2FA Awareness:** If the bridge is configured with a `KUMA_2FA_SECRET`, the agent can perform actions that require 2FA-protected sessions seamlessly via the existing connection.
+1. **Validation is Strict:** Always verify your payload against the `type` of the monitor or resource. If you add a field during a `PATCH`, ensure the resulting object is still valid according to Uptime Kuma's requirements.
+2. **Check the 'ok' Field:** All responses follow the pattern `{"ok": true, ...}` or `{"ok": false, "error": "..."}`. Always check the `ok` field before proceeding.
+3. **Tagging Logic:** When updating tags via `PUT /monitors/:id/tags`, you can use a string (e.g., `"#production"`) to find/create a tag by name, or an integer to use an existing ID.
+4. **The Source of Truth:** If there is any doubt about a field name or required parameter, **always** check `/api/openapi.json` or `docs/MONITOR-TYPES.md` before making the call.

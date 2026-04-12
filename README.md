@@ -34,6 +34,16 @@ services:
     container_name: uptime-kuma-restly
     ports:
       - "9911:9911"
+    environment:
+      - BRIDGE_HOST=${BRIDGE_HOST:-0.0.0.0}
+      - BRIDGE_PORT=${BRIDGE_PORT:-9911}
+      - BRIDGE_TOKEN=${BRIDGE_TOKEN:-BridgeSecretToken}
+      - BRIDGE_LOG_LEVEL=${BRIDGE_LOG_LEVEL:-info}
+      - KUMA_URL=${KUMA_URL:-https://my.kuma.url}
+      - KUMA_USERNAME=${KUMA_USERNAME:-mykumausername}
+      - KUMA_PASSWORD=${KUMA_PASSWORD:-mykumapassword}
+      - KUMA_2FA_SECRET=${KUMA_2FA_SECRET:-your-2fa-secret}
+      - KUMA_TIMEOUT=${KUMA_TIMEOUT:-60}
     env_file:
       - .env
     restart: unless-stopped
@@ -55,6 +65,16 @@ services:
     ports:
       - "3001:3001" # Uptime Kuma UI
       - "9911:9911" # API
+    environment:
+      - BRIDGE_HOST=${BRIDGE_HOST:-0.0.0.0}
+      - BRIDGE_PORT=${BRIDGE_PORT:-9911}
+      - BRIDGE_TOKEN=${BRIDGE_TOKEN:-BridgeSecretToken}
+      - BRIDGE_LOG_LEVEL=${BRIDGE_LOG_LEVEL:-info}
+      - KUMA_URL=${KUMA_URL:-http://127.0.0.1:3001}
+      - KUMA_USERNAME=${KUMA_USERNAME:-mykumausername}
+      - KUMA_PASSWORD=${KUMA_PASSWORD:-mykumapassword}
+      - KUMA_2FA_SECRET=${KUMA_2FA_SECRET:-your-2fa-secret}
+      - KUMA_TIMEOUT=${KUMA_TIMEOUT:-60}
     env_file:
       - .env
     restart: unless-stopped
@@ -94,12 +114,7 @@ BRIDGE_TOKEN=your-secret-token
 BRIDGE_LOG_LEVEL=info
 
 # For Bridge-Only mode, point to your existing Kuma instance
-KUMA_URL=${KUMA_URL:-https://my.kuma.url}
-KUMA_USERNAME=${KUMA_USERNAME:-mykumausername}
-KUMA_PASSWORD=${KUMA_PASSWORD:-mykumapassword}
 
-# Only required if your Kuma account has 2FA enabled
-KUMA_2FA_SECRET=${KUMA_2FA_SECRET:-2fa-secret-key}
 ```
 
 ## 📋 API Reference

@@ -94,12 +94,12 @@ BRIDGE_TOKEN=your-secret-token
 BRIDGE_LOG_LEVEL=info
 
 # For Bridge-Only mode, point to your existing Kuma instance
-KUMA_URL=http://your-kuma-server:3001
-KUMA_USERNAME=admin
-KUMA_PASSWORD=your-kuma-password
+KUMA_URL=${KUMA_URL:-https://my.kuma.url}
+KUMA_USERNAME=${KUMA_USERNAME:-mykumausername}
+KUMA_PASSWORD=${KUMA_PASSWORD:-mykumapassword}
 
 # Only required if your Kuma account has 2FA enabled
-KUMA_2FA_SECRET=
+KUMA_2FA_SECRET=${KUMA_2FA_SECRET:-2fa-secret-key}
 ```
 
 ## 📋 API Reference
@@ -117,7 +117,7 @@ The full per-type required field list and detailed payload structures are docume
 
 ### 🛡️ Authentication
 If a `BRIDGE_TOKEN` is configured, all requests **MUST** include the `Authorization` header with that token.
-`Authorization: Bearer <BRIDGE_TOKEN>`
+`Authorization: Bearer ${BRIDGE_TOKEN}`
 
 ## 📜 License
 MIT

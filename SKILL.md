@@ -8,123 +8,64 @@
 This skill **cannot be used** until the underlying service is deployed and running. 
 
 **First-time Use Protocol:**
-When an agent attempts to use this skill for the first time in a session, it **MUST** ask the user for the following two pieces of information:
-1. **Bridge URL:** The full URL of the running bridge (e.g., `http://localhost:9911`).
-2. **Bridge Token:** The secret token used for authentication. (Inform the user that an empty string is acceptable if no token is required).
+When an agent attempts to use this skill for the first time in a session, it **MUST** ask the user for:
+1. **Bridge URL:** The full URL of the running bridge (e.g., `http://<host>:<port>`).
+2. **Bridge Token:** The secret token used for authentication. (Note: If no token is configured, you do not need to provide one or send an Authorization header).
 
 **Do not proceed with any API calls until these values are provided.**
 
 ### 🔐 Authentication
-All requests **MUST** include the `Authorization` header with the token provided during onboarding.
-`Authorization: Bearer <BRIDGE_TOKEN>`
+If a `BRIDGE_TOKEN` is configured, all requests **MUST** include the `Authorization` header:
+`Authorization: Bearer ${BRIDGE_TOKEN}`
 
-**Note:** If no `BRIDGE_TOKEN` was configured in the bridge application, the `Authorization` header is not required and can be omitted.
+**Note:** If no `BRIDGE_TOKEN` was configured in the environment, you do not need to send this header.
 
 ### 📡 Base URL
 The base path for all API calls is `/api`. 
 *Example: `http://<host>:<port>/api/monitors`*
 
-### 📘 Canonical Data & Discovery (Mandatory)
+### 📘 Discovery & Payload Validation (Mandatory)
 
-**Do not rely on static tables within this file for payload structures.** To prevent errors caused by stale information, agents **MUST** use the following discovery order when performing write operations (POST/PATCH/PUT):
+**IMPORTANT:** **The live `/api/openapi.json` endpoint is the ONLY source of truth for all endpoints, methods, and payload structures.**
 
-1. **Check `/api/openapi.json` First:** This is the most authoritative source for current route paths, required fields, and data types.
-2. **Consult [docs/MONITOR-TYPES.md](docs/MONITOR-TYPES.md):** Use this for the specific validation rules and required fields for different monitor types (e.g., `http`, `dns`, `mqtt`).
-3. **Consult [docs/WRITE-PAYLOADS.md](docs/WRITE-PAYLOADS.md):** Use this for specialized payload structures and edge cases.
-4. **Use the `/monitors/sniff` Endpoint:** If you are unsure of a valid payload for a specific monitor type, use this endpoint to intercept a real request from the Kuma UI to see the exact structure expected by the bridge.
-
-### 🔎 Endpoint Discovery Order
-
-When an agent needs to discover or verify endpoints:
-
-1. Check `/api/openapi.json` first for the current route and schema surface.
-2. Use `/docs` for a human-readable Swagger view.
-3. Use [docs/REST-API.md](docs/REST-API.md) for bridge-specific notes and examples.
-4. Use [docs/MONITOR-TYPES.md](docs/MONITOR-TYPES.md) for monitor-type validation rules.
-
-Do not assume wrapper keys like `notification`, `proxy`, `status_page`, `settings`, `api_key`, or `maintenance`. The REST routes accept raw JSON objects for those resources unless the OpenAPI document says otherwise.
+1. **Primary Source:** Always check `/api/openapi.json` first. This contains all current route paths, HTTP methods (GET, POST, etc.), and required fields.
+2. **Live Debugging:** To understand complex payload structures (like monitor types), use the `/monitors/sniff` endpoint to intercept and inspect real-time Socket.IO payloads from the Uptime Kuma UI.
 
 ---
 
-## 📋 API Reference
+## 📋 API Capability Reference
 
-### 🔍 Health & Discovery
-| Endpoint | Method | Description |
-|---------|--------|-------------|
-| `/health` | `GET` | Returns bridge status and configuration. |
-| `/monitors/sniff` | `POST` | **Debugging:** Blocks and returns the raw Socket.IO payload when a monitor is added via the Kuma UI. |
+### 🔍 System & Discovery
+- **Health Check:** `/health` — Returns bridge status and configuration.
+- **Live Monitoring:** `/monitors/sniff` — Intercept real-time socket payloads from the UI.
 
 ### 🖥️ Monitor Management
-| Endpoint | Method | Payload/Description |
-|----------|--------|---------------------|
-| `/monitors` | `GET` | Returns all monitors as a dictionary keyed by ID. |
-| `/monitors` | `POST` | **Payload:** Monitor object. Refer to `/api/openapi.json` and `docs/MONITOR-TYPES.md` for required fields based on `type`. |
-| `/monitors/:id` | `PATCH` | **Payload:** Partial monitor patch. The final merged monitor must satisfy all type-specific validation rules. |
-| `/monitors/:id`| `DELETE` | Deletes a monitor by ID. |
-| `/monitors/:id/pause` | `POST` | Pauses a monitor. |
-| `/monitors/:id/resume`| `POST` | Resumes a monitor. |
-| `/monitors/:id/status`| `GET` | Returns heartbeat list for a monitor. |
-| `/monitors/by-url?url=...` | `GET` | Finds a monitor by URL. |
+Manage and inspect Uptime Kuma monitors (List, Create, Update, Delete, Pause/Resume, and Status tracking).
+- **List/Create/Delete:** `/monitors`
+- **Update/Pause/Resume/Status:** `/monitors/:id`
+- **By URL:** `/monitors/by-url?url=...`
 
 ### 🏷️ Tagging
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/tags` | `GET` | Returns all tag definitions (id, name, colour). |
-| `/tags` | `POST` | Creates a tag from a raw tag object such as `{"name":"#production","color":"#22c55e"}`. |
-| `/tags/:id` | `PATCH` | Updates a tag from a raw tag object. |
-| `/tags/:id` | `DELETE` | Deletes a tag by ID. |
-| `/monitors/:id/tags`| `PUT` | **Payload:** `{"tags": ["#tag1", 3], "replace": true}`. |
-| `/monitors/:id/tags`| `DELETE` | **Payload:** `{"tags": ["#tag1"]}`. |
+Manage tag definitions and their associations with monitors.
+- **List/Create/Delete:** `/tags`
+- **Update/Remove from Monitor:** `/monitors/:id/tags`
 
 ### 🔔 Notifications & System
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/notifications`| `GET` | List all notification channels. |
-| `/notifications`| `POST` | Create a notification from a raw notification object. |
-| `/notifications/:id`| `PATCH` | Update a notification from a raw notification object. |
-| `/notifications/:id`| `DELETE` | Delete a notification by ID. |
-| `/notifications/:id/test`| `POST` | Test a notification using a raw notification object. |
-| `/proxies`| `GET` | List proxies. |
-| `/proxies`| `POST` | Create a proxy from a raw proxy object. |
-| `/proxies/:id`| `PATCH` | Update a proxy from a raw proxy object. |
-| `/proxies/:id`| `DELETE` | Delete a proxy by ID. |
-| `/status-pages`| `GET` | List all status pages. |
-| `/status-pages`| `POST` | Create a status page from a raw object. |
-| `/status-pages/:slug`| `PUT` | Save a status page using a raw object. |
-| `/status-pages/:slug`| `DELETE` | Delete a status page by slug. |
-| `/settings` | `GET` | Get current Kuma settings. |
-| `/settings` | `PATCH` | Update Kuma settings from a raw settings object. |
-| `/api-keys` | `GET` | List API keys. |
-| `/api-keys` | `POST` | Create an API key from a raw object. |
-| `/api-keys/:id/enable` | `POST` | Enable an API key. |
-| `/api-keys/:id/disable` | `POST` | Disable an API key. |
-| `/api-keys/:id` | `DELETE` | Delete an API key. |
-| `/maintenances` | `GET` | List maintenances. |
-| `/maintenances` | `POST` | Create a maintenance from a raw object. |
-| `/maintenances/:id` | `PATCH` | Update a maintenance from a raw object. |
+Manage notification channels, proxies, and system-wide settings.
+- **Notifications:** `/notifications` (List, Create, Update, Delete, and Test)
+- **Proxies:** `/proxies` (List, Create, Update, Delete)
+- **API Keys:** `/api-keys` (List, Create, Enable, Disable, Delete)
+- **Settings:** `/settings` (Get and Update)
+- **Status Pages:** `/status-pages` (List, Create, Update, Delete)
 
----
-
-## 🚀 Advanced: The `/api/call` Method
-
-For any method not explicitly listed above, use the generic `/call` endpoint. This allows you to execute any method documented in the `uptime-kuma-api` client.
-
-**Endpoint:** `POST /api/call`
-
-**Payload Structure:**
-```json
-{
-  "method": "method_name",
-  "args": [],
-  "kwargs": {}
-}
-```
+### 🚀 Advanced: The `/api/call` Method
+For any method not explicitly listed above, use the generic `/call` endpoint to execute any method documented in the `uptime-kuma-api` client.
+**Payload:** `{"method": "method_name", "args": [], "kwargs": {}}`
 
 ---
 
 ## 💡 Implementation Tips for Agents
 
-1. **Validation is Strict:** Always verify your payload against the `type` of the monitor or resource. If you add a field during a `PATCH`, ensure the resulting object is still valid according to Uptime Kuma's requirements.
+1. **Validation is Strict:** Always verify your JSON payload against the `type` of the resource using the `/api/openapi.json` spec.
 2. **Check the 'ok' Field:** All responses follow the pattern `{"ok": true, ...}` or `{"ok": false, "error": "..."}`. Always check the `ok` field before proceeding.
-3. **Tagging Logic:** When updating tags via `PUT /monitors/:id/tags`, you can use a string (e.g., `"#production"`) to find/create a tag by name, or an integer to use an existing ID.
-4. **The Source of Truth:** If there is any doubt about a field name or required parameter, **always** check `/api/openapi.json` or `docs/MONITOR-TYPES.md` before making the call.
+3. **Handle Defaults:** If a request fails due to missing parameters, use the discovery tools mentioned above to find the correct structure.

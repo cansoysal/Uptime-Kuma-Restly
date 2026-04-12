@@ -19,12 +19,12 @@ Documentation:
 
 This project provides two distinct distributions: the **Bridge** (the core product) and the **Combined** package (a specialized, all-in-one distribution).
 
-### 🔹 1. The Bridge (Default)
+### 🔹 1. The Standard Version (Default)
 *A lightweight sidecar/API layer designed to connect to an existing Uptime Kuma instance.*
 
 - **Best for:** Users who already have Uptime Kuma running (e.g., in a separate container or host) and want to add the REST API layer.
 - **Primary Image Tag:** `ghcr.io/cansoysal/uptime-kuma-restly:latest`
-- **Versioned Tag:** `ghcr.io/cansoysal/uptime-kuma-restly:v0.1.0-bridge`
+- **Versioned Tag:** `ghcr.io/cansoysal/uptime-kuma-restly:v1.0.0-bridge`
 
 **Example `docker-compose.yml`:**
 ```yaml
@@ -40,11 +40,11 @@ services:
 ```
 
 ### 🚀 2. The Combined Package (All-in-One)
-*A frozen, single-container package that bundles a specific version of Uptime Kuma (**v2.2.1**) with the Restly Bridge.*
+*A frozen, single-container package that bundles a specific version of Uptime Kuma (**v2.2.1**) with the API layer.*
 
 - **Best for:** New installations or users who want a single, self-contained, "plug-and-play" unit.
 - **Primary Image Tag:** `ghcr.io/cansoysal/uptime-kuma-restly:latest-combined`
-- **Versioned Tag:** `ghcr.io/cansoysal/uptime-kuma-restly:v1.0.1-combined`
+- **Versioned Tag:** `ghcr.io/cansoysal/uptime-kuma-restly:v1.0.0-combined`
 
 **Example `docker-compose.yml`:**
 ```yaml
@@ -53,8 +53,8 @@ services:
     image: ghcr.io/cansoysal/uptime-kuma-restly:latest-combined
     container_name: uptime-kuma-restly
     ports:
-      - "3001:3001" # Kuma UI
-      - "9911:9911" # Bridge API
+      - "3001:3001" # Uptime Kuma UI
+      - "9911:9911" # API
     env_file:
       - .env
     restart: unless-stopped

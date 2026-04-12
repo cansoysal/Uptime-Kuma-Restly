@@ -72,44 +72,14 @@ git clone https://github.com/cansoysal/Uptime-Kuma-Restly.git
 cd uptime-kuma-restly
 ```
 
-2. **Clone the official Uptime Kuma source (Required for snapshot testing):**
-*This is needed to verify that the documented socket surface matches the official implementation.*
-```bash
-# Note: This directory is already in .gitignore
-git clone --depth 1 https://github.com/louislam/uptime-kuma.git ./uptime-kuma
-```
-
-3. **Install dependencies and run:**
+2. **Install dependencies and run:**
 ```bash
 npm install
 # To run the bridge
 node src/server.js
 ```
 
-### 🔍 Verification Helper
 
-To ensure the documented socket snapshot matches the official Uptime Kuma source:
-
-**Option 1: Running from Source (Developers)**
-If you are running the bridge via `npm start` locally:
-```bash
-# 1. Clone the official source
-git clone --depth 1 https://github.com/louislam/uptime-kuma.git ./uptime-kuma
-
-# 2. Run the check
-npm run check:socket-snapshot
-```
-
-**Option 2: Running against a Docker Container (Production/Unraid Users)**
-If you are using the official image, run this single command from your host. It uses a tiny, temporary `node:20-alpine` container so you don't need to install anything on your host machine.
-```bash
-# 1. Clone the official source to your host
-git clone --depth 1 https://github.com/louislam/uptime-kuma.git ./uptime-kuma
-
-# 2. Run the check via a temporary container
-docker run --rm -v $(pwd)/uptime-kuma:/app/uptime-kuma node:20-alpine \
-  sh -c "cd /app/uptime-kuma && npx ../scripts/check-kuma-socket-snapshot.js /app/uptime-kuma ../docs/UPTIME-KUMA-SOCKET-SNAPSHOT.md"
-```
 
 ---
 
@@ -146,7 +116,7 @@ The full per-type required field list and detailed payload structures are docume
 - [docs/REST-API.md](docs/REST-API.md)
 
 ### 🛡️ Authentication
-All requests **MUST** include the `Authorization` header with the token provided in your configuration.
+If a `BRIDGE_TOKEN` is configured, all requests **MUST** include the `Authorization` header with that token.
 `Authorization: Bearer <BRIDGE_TOKEN>`
 
 ## 📜 License

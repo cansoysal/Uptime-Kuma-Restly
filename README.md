@@ -60,8 +60,6 @@ services:
 - **Primary Image Tag:** `ghcr.io/cansoysal/uptime-kuma-restly:latest-combined`
 - **Versioned Tag:** `ghcr.io/cansoysal/uptime-kuma-restly:v1.0.0-combined`
 
-**Note:** For Unraid users, a unified XML template is available in the `unraid/` directory that supports both versions.
-
 **Example `docker-compose.yml`:**
 ```yaml
 services:
@@ -85,6 +83,9 @@ services:
       - .env
     restart: unless-stopped
 ```
+
+### 🛠️ Unraid Support
+For users running Unraid, a unified XML template is available in the `unraid/` directory. This template is designed to support both the Standard and Combined versions automatically.
 
 ---
 

@@ -40,7 +40,7 @@ ghcr.io/cansoysal/uptime-kuma-restly:latest-combined
   <Config Name="BRIDGE_PORT" Target="BRIDGE_PORT" Default="9911" Mode="" Description="Internal port used by the REST bridge." Type="Variable" Display="advanced" Required="true" Mask="false">9911</Config>
   <Config Name="BRIDGE_TOKEN" Target="BRIDGE_TOKEN" Default="" Mode="" Description="Optional Bearer token required by the REST bridge. Leave blank only for trusted local use." Type="Variable" Display="always" Required="false" Mask="true"></Config>
   <Config Name="BRIDGE_LOG_LEVEL" Target="BRIDGE_LOG_LEVEL" Default="info" Mode="" Description="Log level for the bridge." Type="Variable" Display="advanced" Required="false" Mask="false">info</Config>
-  <Config Name="UPTIME_KUMA_TAG" Target="UPTIME_KUMA_TAG" Default="2" Mode="" Description="Base Uptime Kuma tag for the combined image." Type="Variable" Display="advanced" Required="false" Mask="false">2</Config>
+  <Config Name="UPTIME_KUMA_TAG" Target="UPTIME_KUMA_TAG" Default="2.2.1" Mode="" Description="Base Uptime Kuma tag for the combined image." Type="Variable" Display="advanced" Required="false" Mask="false">2.2.1</Config>
 
   <Config Name="KUMA_URL" Target="KUMA_URL" Default="http://127.0.0.1:3001" Mode="" Description="Base URL of your existing Uptime Kuma instance. (Required for Bridge, defaults to localhost for Combined)." Type="Variable" Display="always" Required="false" Mask="false">http://127.0.0.1:3001</Config>
   <Config Name="KUMA_USERNAME" Target="KUMA_USERNAME" Default="" Mode="" Description="Optional Kuma username for automatic bridge login." Type="Variable" Display="always" Required="false" Mask="false"></Config>

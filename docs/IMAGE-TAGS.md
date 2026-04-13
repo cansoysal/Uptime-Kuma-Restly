@@ -8,7 +8,7 @@ This project’s combined image can be built against different upstream Uptime K
 
 Default:
 
-- `UPTIME_KUMA_TAG=2`
+- `UPTIME_KUMA_TAG=2.2.1`
 
 Current practical difference
 

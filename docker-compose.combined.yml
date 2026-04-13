@@ -4,7 +4,7 @@ services:
             context: .
             dockerfile: docker/combined.Dockerfile
             args:
-                UPTIME_KUMA_TAG: ${UPTIME_KUMA_TAG:-2}
+                UPTIME_KUMA_TAG: ${UPTIME_KUMA_TAG:-2.2.1}
         image: uptime-kuma-restly-combined:latest
         container_name: uptime-kuma-restly-combined
         restart: unless-stopped
@@ -18,7 +18,7 @@ services:
             - BRIDGE_PORT=${BRIDGE_PORT:-9911}
             - BRIDGE_TOKEN=${BRIDGE_TOKEN:-BridgeSecretToken}
             - BRIDGE_LOG_LEVEL=${BRIDGE_LOG_LEVEL:-info}
-            - UPTIME_KUMA_TAG=${UPTIME_KUMA_TAG:-2}
+            - UPTIME_KUMA_TAG=${UPTIME_KUMA_TAG:-2.2.1}
             - KUMA_URL=${KUMA_URL:-http://127.0.0.1:3001}
             - KUMA_USERNAME=${KUMA_USERNAME:-mykumausername}
             - KUMA_PASSWORD=${KUMA_PASSWORD:-mykumapassword}
